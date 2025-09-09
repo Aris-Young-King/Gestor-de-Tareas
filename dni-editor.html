@@ -1094,13 +1094,13 @@
           // Si el usuario no ha iniciado sesión, redirige a la página de inicio.
         // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
         if (sessionStorage.getItem("isLoggedIn") !== "true") {
-            window.location.replace('Inicio.html');
+            window.location.replace('index.html');
         }
 
         // Esta función se activará al hacer clic en "Cerrar sesión"
         function cerrarSesion() {
             sessionStorage.removeItem("isLoggedIn");
-            window.location.replace('Inicio.html');
+            window.location.replace('index.html');
         }
     </script>
 </body>
