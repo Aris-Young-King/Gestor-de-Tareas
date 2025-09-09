@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Herramientas PDF - Viewer · Unir · Dividir · Extraer · Convertir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 1.5rem;
+      background: #f0f0ff
+    }
+
+    .pdf-list {
+      max-height: 260px;
+      overflow-y: auto
+    }
+
+    .thumb {
+      cursor: pointer;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 4px;
+      background: white
+    }
+
+    #viewerCanvas {
+      width: 100%;
+      height: auto;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      background: white
+    }
+
+    .page-checkbox {
+      width: 18px;
+      height: 18px
+    }
+
+    .small-note {
+      font-size: .85rem;
+      color: #6a1a8c
+    }
+
+    .drag-handle {
+      cursor: move;
+      margin-right: 6px;
+      color: #888
+    }
+
+    .btn-move {
+      width: 30px;
+    }
+
+    .pages-panel {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .page-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .page-item label {
+      margin-left: 5px;
+      cursor: pointer;
+    }
+
+    .thumbnail-container {
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+
+    /* Estilos de la nueva paleta de colores */
+    .card {
+      background-color: #ffffff;
+    }
+
+    h2,
+    .form-label,
+    strong {
+      color: #8a2be2;
+    }
+
+    .btn-primary,
+    .btn-outline-primary {
+      background-color: #8a2be2;
+      border-color: #8a2be2;
+      color: #fff;
+    }
+
+    .btn-outline-primary {
+      background-color: transparent;
+      color: #8a2be2;
+    }
+
+    .btn-primary:hover,
+    .btn-outline-primary:hover {
+      background-color: #6a1a8c;
+      border-color: #6a1a8c;
+      color: #fff;
+    }
+
+    .btn-secondary,
+    .btn-outline-secondary {
+      background-color: #6a1a8c;
+      border-color: #6a1a8c;
+      color: #fff;
+    }
+
+    .btn-outline-secondary {
+      background-color: transparent;
+      color: #6a1a8c;
+    }
+
+    .btn-secondary:hover,
+    .btn-outline-secondary:hover {
+      background-color: #4b1263;
+      border-color: #4b1263;
+      color: #fff;
+    }
+
+    .text-dark-emphasis,
+    #currentFileName {
+      color: #6a1a8c !important;
+    }
+
+    #uploadedList .list-group-item {
+      background-color: #ffffff;
+    }
+
+    .btn-warning {
+      background-color: #8a2be2;
+      border-color: #8a2be2;
+    }
+
+    .btn-warning:hover {
+      background-color: #6a1a8c;
+      border-color: #6a1a8c;
+    }
+
+    /* Nuevo estilo para el mensaje de estado */
+    #statusMessage {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background-color: #e9ecef;
+      border-radius: 0.375rem;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <h2 class="mb-3">Herramientas PDF — Viewer, Unir, Dividir, Extraer, Convertir a imagen</h2>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card p-3">
+          <label class="form-label">Cargar PDFs (múltiples)</label>
+          <input id="fileInput" type="file" accept="application/pdf" class="form-control mb-2" multiple>
+          <div class="small-note mb-2">Sube uno o varios archivos PDF. El procesamiento ocurre en el
+            navegador (no se sube a servidores). Puedes reordenar con los botones.</div>
+          <ul class="pdf-list list-group" id="uploadedList"></ul>
+          <hr>
+          <div class="d-grid gap-2">
+            <button id="mergeBtn" class="btn btn-primary">Unir PDFs en el orden mostrado</button>
+            <button id="exportSelectedBtn" class="btn btn-outline-primary">Extraer páginas
+              seleccionadas</button>
+            <button id="removePagesBtn" class="btn btn-outline-danger">Eliminar páginas seleccionadas</button>
+
+            <div class="input-group mb-2">
+              <label class="input-group-text" for="compressionLevel">Nivel</label>
+              <select id="compressionLevel" class="form-select">
+                <option value="low">Baja</option>
+                <option value="medium" selected>Media</option>
+                <option value="high">Avanzado</option>
+              </select>
+            </div>
+            <button id="compressBtn" class="btn btn-outline-primary">Comprimir PDF</button>
+            <div id="compressionInfo" class="small-note mt-2"></div>
+            <div id="statusMessage"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <strong id="currentFileName">Ningún documento seleccionado</strong>
+              <div class="small-note" id="fileInfo">Sube un PDF y selecciona para ver páginas.</div>
+            </div>
+            <div class="btn-group">
+              <button id="prevPage" class="btn btn-sm btn-secondary">◀</button>
+              <button id="nextPage" class="btn btn-sm btn-secondary">▶</button>
+              <button id="convertToImage" class="btn btn-sm btn-warning">Convertir página a
+                imagen</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-4">
+              <div id="thumbnails" class="d-grid gap-2 thumbnail-container"></div>
+            </div>
+            <div class="col-8">
+              <canvas id="viewerCanvas"></canvas>
+              <div class="mt-2 d-flex justify-content-between align-items-center">
+                <div>
+                  Página <span id="pageNum">0</span> / <span id="pageCount">0</span>
+                </div>
+                <div class="small-note">Usa las flechas o haz click en miniaturas para navegar.</div>
+              </div>
+            </div>
+          </div>
+          <hr>
+          <div>
+            <label class="form-label">Páginas del archivo (marca para acciones: extraer o
+              eliminar)</label>
+            <div id="pagesCheckboxes" class="pages-panel"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr>
+    <div class="small-note">Notas: Esta herramienta usa <code>pdf.js</code> para render y <code>pdf-lib</code> para
+      editar/combinar/comprimir. Todo ocurre localmente en tu navegador.</div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+  <script>
+    if (window['pdfjsLib']) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    const uploadedList = document.getElementById('uploadedList');
+    const thumbnails = document.getElementById('thumbnails');
+    const viewerCanvas = document.getElementById('viewerCanvas');
+    const pageNumSpan = document.getElementById('pageNum');
+    const pageCountSpan = document.getElementById('pageCount');
+    const currentFileName = document.getElementById('currentFileName');
+    const fileInfo = document.getElementById('fileInfo');
+    const pagesCheckboxes = document.getElementById('pagesCheckboxes');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const exportSelectedBtn = document.getElementById('exportSelectedBtn');
+    const removePagesBtn = document.getElementById('removePagesBtn');
+    const convertToImageBtn = document.getElementById('convertToImage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const compressBtn = document.getElementById('compressBtn');
+
+    const compressionInfo = document.getElementById('compressionInfo');
+    const compressionLevelSelect = document.getElementById('compressionLevel');
+    const statusMessage = document.getElementById('statusMessage');
+
+    compressBtn.addEventListener('click', async () => {
+      if (uploadedFiles.length === 0) return alert('Sube un PDF primero.');
+
+      statusMessage.style.display = 'block';
+      statusMessage.textContent = 'Comprimiendo PDF, por favor espere...';
+      compressBtn.disabled = true;
+
+      const level = compressionLevelSelect.value;
+      let quality = 0.7;
+      let scale = 1.5;
+      if (level === 'low') {
+        quality = 0.85;
+        scale = 1.25;
+      } else if (level === 'medium') {
+        quality = 0.6;
+        scale = 1.5;
+      } else if (level === 'high') {
+        quality = 0.3;
+        scale = 1.75;
+      }
+
+      try {
+        const sourcePdf = uploadedFiles.length > 1 ? combinedPdfDoc : uploadedFiles[0].pdfjsDoc;
+        if (!sourcePdf) {
+          throw new Error('No se puede cargar el PDF para comprimir.');
+        }
+        const newDoc = await PDFLib.PDFDocument.create();
+        const total = sourcePdf.numPages;
+
+        for (let i = 1; i <= total; i++) {
+          const page = await sourcePdf.getPage(i);
+          const viewport = page.getViewport({
+            scale
+          });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({
+            canvasContext: ctx,
+            viewport
+          }).promise;
+
+          const imgData = canvas.toDataURL('image/jpeg', quality);
+          const jpgImage = await newDoc.embedJpg(imgData);
+          const pdfPage = newDoc.addPage([canvas.width, canvas.height]);
+          pdfPage.drawImage(jpgImage, {
+            x: 0,
+            y: 0,
+            width: canvas.width,
+            height: canvas.height
+          });
+        }
+
+        const bytes = await newDoc.save();
+
+        const originalBuffer = uploadedFiles.length > 1 ? await PDFLib.PDFDocument.load(uploadedFiles.map(f => f.arrayBuffer)).save() : uploadedFiles[0].arrayBuffer;
+        const originalSize = originalBuffer.byteLength;
+        const compressedSize = bytes.byteLength;
+        const percent = ((1 - compressedSize / originalSize) * 100).toFixed(2);
+
+        compressionInfo.innerHTML =
+          `📄 Original: ${(originalSize / 1024 / 1024).toFixed(2)} MB<br>` +
+          `📉 Comprimido: ${(compressedSize / 1024 / 1024).toFixed(2)} MB<br>` +
+          `⚡ Reducción: ${percent}%`;
+
+        saveAs(new Blob([bytes], {
+          type: 'application/pdf'
+        }), `compressed-${level}.pdf`);
+
+      } catch (err) {
+        console.error('Error en compresión:', err);
+        alert('Error al comprimir: ' + err.message);
+      } finally {
+        statusMessage.style.display = 'none';
+        compressBtn.disabled = false;
+      }
+    });
+
+    const ctx = viewerCanvas.getContext('2d');
+
+    let uploadedFiles = [];
+    let combinedPdfDoc = null;
+    let current = {
+      page: 1
+    };
+
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
+      for (const f of files) {
+        const buffer = await f.arrayBuffer();
+        const id = Math.random().toString(36).slice(2, 10);
+        const item = {
+          id,
+          file: f,
+          name: f.name,
+          arrayBuffer: buffer,
+          pdfjsDoc: null,
+          pageCount: 0
+        };
+        try {
+          const loadingTask = pdfjsLib.getDocument({
+            data: buffer
+          });
+          item.pdfjsDoc = await loadingTask.promise;
+          item.pageCount = item.pdfjsDoc.numPages;
+        } catch (err) {
+          console.error('Error leyendo PDF', err);
+          item.pageCount = 0;
+        }
+        uploadedFiles.push(item);
+      }
+      renderUploadedList();
+      updateCombinedPdf();
+    });
+
+    async function updateCombinedPdf() {
+      if (uploadedFiles.length === 0) {
+        combinedPdfDoc = null;
+        currentFileName.textContent = 'Ningún documento seleccionado';
+        fileInfo.textContent = 'Sube un PDF y selecciona para ver páginas.';
+        pageNumSpan.textContent = '0';
+        pageCountSpan.textContent = '0';
+        viewerCanvas.width = 0;
+        viewerCanvas.height = 0;
+        thumbnails.innerHTML = '';
+        pagesCheckboxes.innerHTML = '';
+        return;
+      }
+
+      try {
+        const mergedPdf = await PDFLib.PDFDocument.create();
+        for (const it of uploadedFiles) {
+          const donor = await PDFLib.PDFDocument.load(it.arrayBuffer);
+          const donorPages = await mergedPdf.copyPages(donor, donor.getPageIndices());
+          donorPages.forEach(p => mergedPdf.addPage(p));
+        }
+        const mergedBytes = await mergedPdf.save();
+        const loadingTask = pdfjsLib.getDocument({
+          data: mergedBytes
+        });
+        combinedPdfDoc = await loadingTask.promise;
+
+        currentFileName.textContent = 'Documento combinado';
+        fileInfo.textContent = `Páginas: ${combinedPdfDoc.numPages}`;
+        current.page = 1;
+        renderPage();
+        renderThumbnails();
+        renderPagesCheckboxes();
+
+      } catch (err) {
+        console.error('Error al combinar los PDFs', err);
+        alert('Error al combinar los PDFs para visualización.');
+      }
+    }
+
+    function renderUploadedList() {
+      uploadedList.innerHTML = '';
+      uploadedFiles.forEach((it, i) => {
+        const el = document.createElement('li');
+        el.className = 'list-group-item d-flex justify-content-between align-items-center';
+        el.innerHTML = `
+            <div class="d-flex align-items-center">
+              <div class="btn-group-vertical me-2">
+                <button class="btn btn-sm btn-outline-secondary btn-move" onclick="moveFile(${i}, 'up')">▲</button>
+                <button class="btn btn-sm btn-outline-secondary btn-move" onclick="moveFile(${i}, 'down')">▼</button>
+              </div>
+              <div class="ms-2 me-auto">
+                <div class="fw-bold">${escapeHtml(it.name)}</div>
+                <div class="small-note">Páginas: ${it.pageCount}</div>
+              </div>
+            </div>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" onclick="updateCombinedPdf()">Ver todo</button>
+              <button class="btn btn-outline-secondary" onclick="downloadOriginal(${i})">Descargar</button>
+              <button class="btn btn-outline-danger" onclick="removeFile(${i})">Eliminar</button>
+            </div>
+          `;
+        uploadedList.appendChild(el);
+      });
+    }
+
+    function moveFile(index, direction) {
+      if (direction === 'up' && index > 0) {
+        [uploadedFiles[index], uploadedFiles[index - 1]] = [uploadedFiles[index - 1], uploadedFiles[index]];
+      } else if (direction === 'down' && index < uploadedFiles.length - 1) {
+        [uploadedFiles[index], uploadedFiles[index + 1]] = [uploadedFiles[index + 1], uploadedFiles[index]];
+      }
+      renderUploadedList();
+      updateCombinedPdf();
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function renderPage() {
+      if (!combinedPdfDoc) return;
+      const pageNumber = current.page;
+      const page = await combinedPdfDoc.getPage(pageNumber);
+      const viewport = page.getViewport({
+        scale: 2
+      });
+      viewerCanvas.width = viewport.width;
+      viewerCanvas.height = viewport.height;
+      const renderContext = {
+        canvasContext: ctx,
+        viewport
+      };
+      await page.render(renderContext).promise;
+      pageNumSpan.textContent = pageNumber;
+      pageCountSpan.textContent = combinedPdfDoc.numPages;
+    }
+
+    async function renderThumbnails() {
+      thumbnails.innerHTML = '';
+      if (!combinedPdfDoc) return;
+
+      let pageOffset = 1;
+      for (const it of uploadedFiles) {
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'thumbnail-group';
+
+        const groupLabel = document.createElement('div');
+        groupLabel.className = 'thumbnail-group-label';
+        groupLabel.textContent = it.name;
+        groupContainer.appendChild(groupLabel);
+
+        const thumbnailsGrid = document.createElement('div');
+        thumbnailsGrid.className = 'd-grid gap-2';
+
+        for (let p = 1; p <= it.pageCount; p++) {
+          const combinedPageNum = pageOffset + p - 1;
+          const canvas = document.createElement('canvas');
+          canvas.className = 'thumb';
+          canvas.width = 120;
+          canvas.height = 150;
+          canvas.title = `Página ${p} de ${it.name}`;
+
+          (async function (pp, cv) {
+            const page = await combinedPdfDoc.getPage(pp);
+            const scale = 120 / page.getViewport({
+              scale: 1
+            }).width;
+            const viewport = page.getViewport({
+              scale
+            });
+            cv.width = viewport.width;
+            cv.height = viewport.height;
+            await page.render({
+              canvasContext: cv.getContext('2d'),
+              viewport
+            }).promise;
+          })(combinedPageNum, canvas);
+
+          canvas.onclick = function () {
+            current.page = combinedPageNum;
+            renderPage();
+          };
+          thumbnailsGrid.appendChild(canvas);
+        }
+        groupContainer.appendChild(thumbnailsGrid);
+        thumbnails.appendChild(groupContainer);
+        pageOffset += it.pageCount;
+      }
+    }
+
+    function renderPagesCheckboxes() {
+      pagesCheckboxes.innerHTML = '';
+      if (!combinedPdfDoc) return;
+
+      let pageOffset = 1;
+      for (const it of uploadedFiles) {
+        for (let p = 1; p <= it.pageCount; p++) {
+          const combinedPageNum = pageOffset + p - 1;
+          const btn = document.createElement('label');
+          btn.className = 'btn btn-outline-secondary btn-sm d-flex align-items-center gap-2';
+          btn.style.borderRadius = '6px';
+          btn.style.padding = '4px 8px';
+          btn.innerHTML = `<input class='form-check-input me-2 page-checkbox' type='checkbox' data-page='${combinedPageNum}'> Pág. ${combinedPageNum} - ${it.name}`;
+          pagesCheckboxes.appendChild(btn);
+        }
+        pageOffset += it.pageCount;
+      }
+    }
+
+    async function downloadOriginal(i) {
+      const it = uploadedFiles[i];
+      const blob = new Blob([it.arrayBuffer], {
+        type: 'application/pdf'
+      });
+      saveAs(blob, it.name);
+    }
+
+    function removeFile(i) {
+      uploadedFiles.splice(i, 1);
+      renderUploadedList();
+      updateCombinedPdf();
+
+      // Limpiar los campos de compresión
+      compressionInfo.innerHTML = '';
+      statusMessage.style.display = 'none';
+    }
+
+    prevPageBtn.addEventListener('click', () => {
+      if (!combinedPdfDoc) return;
+      if (current.page > 1) {
+        current.page--;
+        renderPage();
+      }
+    });
+
+    nextPageBtn.addEventListener('click', () => {
+      if (!combinedPdfDoc) return;
+      const max = combinedPdfDoc.numPages;
+      if (current.page < max) {
+        current.page++;
+        renderPage();
+      }
+    });
+
+    convertToImageBtn.addEventListener('click', () => {
+      if (!combinedPdfDoc) return alert('Selecciona un documento y una página.');
+      viewerCanvas.toBlob(blob => {
+        const filename = `combined-page${current.page}.png`;
+        saveAs(blob, filename);
+      }, 'image/png');
+    });
+
+    mergeBtn.addEventListener('click', async () => {
+      if (uploadedFiles.length < 1) return alert('Sube al menos 1 PDF.');
+      try {
+        const mergedPdf = await PDFLib.PDFDocument.create();
+        for (const it of uploadedFiles) {
+          const donor = await PDFLib.PDFDocument.load(it.arrayBuffer);
+          const donorPages = await mergedPdf.copyPages(donor, donor.getPageIndices());
+          donorPages.forEach(p => mergedPdf.addPage(p));
+        }
+        const bytes = await mergedPdf.save();
+        saveAs(new Blob([bytes], {
+          type: 'application/pdf'
+        }), 'merged.pdf');
+      } catch (err) {
+        console.error(err);
+        alert('Error al unir: ' + err.message);
+      }
+    });
+
+    exportSelectedBtn.addEventListener('click', async () => {
+      if (!combinedPdfDoc) return alert('Sube un PDF para extraer páginas.');
+      const checked = Array.from(pagesCheckboxes.querySelectorAll('input[type=checkbox]:checked')).map(n => parseInt(n.dataset.page));
+      if (checked.length === 0) return alert('Marca al menos una página a extraer.');
+      try {
+        const src = await PDFLib.PDFDocument.load(uploadedFiles[0].arrayBuffer);
+        const newDoc = await PDFLib.PDFDocument.create();
+        for (const p of checked) {
+          const [copied] = await newDoc.copyPages(src, [p - 1]);
+          newDoc.addPage(copied);
+        }
+        const bytes = await newDoc.save();
+        saveAs(new Blob([bytes], {
+          type: 'application/pdf'
+        }), 'extracted-pages.pdf');
+      } catch (err) {
+        console.error(err);
+        alert('Error al extraer: ' + err.message);
+      }
+    });
+
+    removePagesBtn.addEventListener('click', async () => {
+      if (uploadedFiles.length === 0) {
+        return alert('Sube un PDF para eliminar páginas.');
+      }
+
+      const checked = Array.from(pagesCheckboxes.querySelectorAll('input[type=checkbox]:checked')).map(n => parseInt(n.dataset.page));
+      if (checked.length === 0) {
+        return alert('Marca al menos una página a eliminar.');
+      }
+
+      try {
+        const src = await PDFLib.PDFDocument.load(uploadedFiles[0].arrayBuffer);
+        const newDoc = await PDFLib.PDFDocument.create();
+        const total = src.getPageCount();
+
+        for (let p = 1; p <= total; p++) {
+          if (!checked.includes(p)) {
+            const [copied] = await newDoc.copyPages(src, [p - 1]);
+            newDoc.addPage(copied);
+          }
+        }
+
+        const bytes = await newDoc.save();
+
+        const newFileItem = {
+          id: Math.random().toString(36).slice(2, 10),
+          file: new Blob([bytes], {
+            type: 'application/pdf'
+          }),
+          name: 'modificado.pdf',
+          arrayBuffer: bytes,
+          pdfjsDoc: await pdfjsLib.getDocument({
+            data: bytes
+          }).promise,
+          pageCount: newDoc.getPageCount()
+        };
+
+        uploadedFiles = [newFileItem];
+
+        renderUploadedList();
+        updateCombinedPdf();
+
+        alert('Páginas eliminadas correctamente. El documento en vista ha sido actualizado.');
+        saveAs(new Blob([bytes], {
+          type: 'application/pdf'
+        }), 'removed-pages.pdf');
+
+      } catch (err) {
+        console.error('Error al eliminar:', err);
+        alert('Error al eliminar: ' + err.message);
+      }
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    window.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      const dt = e.dataTransfer;
+      if (dt.files) {
+        const files = Array.from(dt.files).filter(f => f.type === 'application/pdf');
+        for (const f of files) {
+          const buffer = await f.arrayBuffer();
+          const id = Math.random().toString(36).slice(2, 10);
+          const item = {
+            id,
+            file: f,
+            name: f.name,
+            arrayBuffer: buffer,
+            pdfjsDoc: null,
+            pageCount: 0
+          };
+          try {
+            const loadingTask = pdfjsLib.getDocument({
+              data: buffer
+            });
+            item.pdfjsDoc = await loadingTask.promise;
+            item.pageCount = item.pdfjsDoc.numPages;
+          } catch (err) {
+            console.error('Error leyendo PDF', err);
+            item.pageCount = 0;
+          }
+          uploadedFiles.push(item);
+        }
+        renderUploadedList();
+        updateCombinedPdf();
+      }
+    });
+
+      // Si el usuario no ha iniciado sesión, redirige a la página de inicio.
+        // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.replace('Inicio.html');
+        }
+
+        // Esta función se activará al hacer clic en "Cerrar sesión"
+        function cerrarSesion() {
+            sessionStorage.removeItem("isLoggedIn");
+            window.location.replace('Inicio.html');
+        }
+  </script>
+</body>
+
+</html>

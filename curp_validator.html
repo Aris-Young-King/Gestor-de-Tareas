@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Comparar CURPs Excel vs ZIP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f0f0ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background-color: #6a1a8c;
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-weight: 700;
+        }
+
+        .card-custom {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: white;
+            color: #4a4a4a;
+        }
+
+        .card-custom:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-title-custom {
+            color: #8a2be2;
+            font-weight: 600;
+        }
+
+        .btn-custom {
+            background-color: #8a2be2;
+            border: none;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .btn-custom:hover {
+            background-color: #6a1a8c;
+        }
+
+        .list-group-item.text-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .list-group-item.text-primary {
+            background-color: #cce5ff;
+            color: #004085;
+            border-color: #b8daff;
+        }
+
+        .list-group-item.text-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .list-scroll-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        h1 {
+            color: #6a1a8c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container my-5">
+        <h1 class="mb-4 text-center">Gestor de Archivos Excel y Creador de Documentos</h1>
+        <div class="card card-custom shadow p-4 mb-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Cargar archivo Excel con CURPs</label>
+                <input type="file" id="excelInput" accept=".xlsx,.xls" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Cargar archivo ZIP con carpetas</label>
+                <input type="file" id="zipInput" accept=".zip" class="form-control">
+            </div>
+            <button class="btn btn-custom w-100" onclick="procesar()">
+                <i class="bi bi-search me-2"></i>Procesar
+            </button>
+        </div>
+
+        <div id="resultado" class="card card-custom shadow p-4 d-none">
+            <h4 class="card-title-custom mb-3">Resultados de la Comparación:</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-center card-title-custom mb-3">📋 CURPs del Excel</h5>
+                    <div class="list-scroll-container">
+                        <ul id="listaExcel" class="list-group"></ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-center card-title-custom mb-3">📁 Carpetas del ZIP</h5>
+                    <div class="list-scroll-container">
+                        <ul id="listaZip" class="list-group"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button class="btn btn-custom" onclick="exportarExcel()">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Descargar Resultados en Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let curpsExcel = [];
+        let curpsZip = [];
+        let resultadosFinales = [];
+
+        // Leer archivo Excel
+        document.getElementById('excelInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                curpsExcel = [];
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const cells = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    cells.flat().forEach(value => {
+                        if (typeof value === 'string' && value.trim().length >= 18) {
+                            curpsExcel.push(value.trim().toUpperCase());
+                        }
+                    });
+                });
+                alert("Excel cargado. CURPs encontradas: " + curpsExcel.length);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Leer archivo ZIP
+        document.getElementById('zipInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                const zip = await JSZip.loadAsync(e.target.result);
+                curpsZip = [];
+                Object.keys(zip.files).forEach(name => {
+                    if (zip.files[name].dir) {
+                        const folderName = name.replace(/\/$/, "");
+                        curpsZip.push(folderName.split("/").pop().toUpperCase());
+                    }
+                });
+                alert("ZIP cargado. Carpetas encontradas: " + curpsZip.length);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Calcular similitud (Levenshtein)
+        function similarity(a, b) {
+            if (!a || !b) return 0;
+            const matrix = Array.from({ length: a.length + 1 }, () => []);
+            for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+            for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    if (a[i - 1] === b[j - 1]) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+            const distance = matrix[a.length][b.length];
+            return 1 - distance / Math.max(a.length, b.length);
+        }
+
+        // Procesar comparación
+        function procesar() {
+            if (curpsExcel.length === 0 || curpsZip.length === 0) {
+                alert("Carga primero el Excel y el ZIP.");
+                return;
+            }
+
+            const listaExcel = document.getElementById('listaExcel');
+            const listaZip = document.getElementById('listaZip');
+            listaExcel.innerHTML = "";
+            listaZip.innerHTML = "";
+            resultadosFinales = [];
+
+            // Revisar CURPs del Excel
+            curpsExcel.forEach(curp => {
+                let encontrado = false;
+                let similar = false;
+                let estatus = "";
+                let carpetaRelacionada = "";
+
+                // Coincidencia exacta
+                if (curpsZip.includes(curp)) {
+                    encontrado = true;
+                    estatus = "Coincidencia exacta";
+                    carpetaRelacionada = curp;
+                    pintarLi(listaExcel, "✔ " + curp, "success");
+                    pintarLi(listaZip, "✔ " + carpetaRelacionada, "success");
+                } else {
+                    // Coincidencia aproximada >= 94% (incluye casos con un carácter extra/de menos)
+                    for (let c of curpsZip) {
+                        if (similarity(curp, c) >= 0.94) {
+                            similar = true;
+                            estatus = "Coincidencia aproximada con " + c;
+                            carpetaRelacionada = c;
+                            pintarLi(listaExcel, "≈ " + curp, "primary");
+                            pintarLi(listaZip, "≈ " + carpetaRelacionada, "primary");
+                            break;
+                        }
+                    }
+                }
+
+                if (!encontrado && !similar) {
+                    estatus = "No tiene carpeta";
+                    pintarLi(listaExcel, "✘ " + curp, "danger");
+                    pintarLi(listaZip, "✘ ---", "danger");
+                }
+
+                resultadosFinales.push({ CURP: curp, Carpeta: carpetaRelacionada || "---", Estatus: estatus });
+            });
+
+            document.getElementById('resultado').classList.remove('d-none');
+        }
+
+        // Pintar elementos en listas
+        function pintarLi(lista, texto, color) {
+            const li = document.createElement('li');
+            li.className = "list-group-item text-" + color + " fw-bold";
+            li.textContent = texto;
+            lista.appendChild(li);
+        }
+
+        // Exportar a Excel con colores
+        function exportarExcel() {
+            if (resultadosFinales.length === 0) {
+                alert("No hay resultados para exportar");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(resultadosFinales);
+
+            // Aplicar formato simple con colores
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = 1; R <= range.e.r; R++) {
+                const estatus = resultadosFinales[R - 1].Estatus;
+                let color = "FF0000";
+                if (estatus.includes("exacta")) color = "00FF00";
+                else if (estatus.includes("aproximada")) color = "0000FF";
+
+                ["A", "B", "C"].forEach(col => {
+                    const cell = ws[col + (R + 1)];
+                    if (cell) {
+                        cell.s = {
+                            fill: { fgColor: { rgb: color } },
+                            font: { bold: true, color: { rgb: "FFFFFF" } }
+                        };
+                    }
+                });
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+            XLSX.writeFile(wb, "Resultados_CURP.xlsx");
+        }
+
+        // Sincronizar el scroll de las listas
+        const containerExcel = document.querySelector('#listaExcel').parentElement;
+        const containerZip = document.querySelector('#listaZip').parentElement;
+
+        let isSyncing = false;
+
+        function syncScroll(event) {
+            if (isSyncing) return;
+            isSyncing = true;
+
+            const otherContainer = (event.target === containerExcel) ? containerZip : containerExcel;
+            otherContainer.scrollTop = event.target.scrollTop;
+
+            setTimeout(() => {
+                isSyncing = false;
+            }, 10);
+        }
+
+        containerExcel.addEventListener('scroll', syncScroll);
+        containerZip.addEventListener('scroll', syncScroll);
+
+          // Si el usuario no ha iniciado sesión, redirige a la página de inicio.
+        // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.replace('Inicio.html');
+        }
+
+        // Esta función se activará al hacer clic en "Cerrar sesión"
+        function cerrarSesion() {
+            sessionStorage.removeItem("isLoggedIn");
+            window.location.replace('Inicio.html');
+        }
+    </script>
+
+</body>
+
+</html>

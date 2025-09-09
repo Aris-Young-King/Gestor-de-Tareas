@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Escáner de DNI/INE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        html,
+        body {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0ff;
+            /* Fondo: Lila muy claro */
+            color: #333;
+        }
+
+        .header {
+            background-color: #6a1a8c;
+            /* Encabezado: Lila oscuro */
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            border-bottom: 2px solid #8a2be2;
+        }
+
+        #editorControls {
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: #ffffff;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .card-custom {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            background-color: #ffffff;
+        }
+
+        .card-title-custom {
+            color: #8a2be2;
+            /* Títulos: Lila intenso */
+            font-weight: 600;
+        }
+
+        .btn-custom {
+            background-color: #8a2be2;
+            border: none;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .btn-custom:hover {
+            background-color: #6a1a8c;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            display: inline-block;
+            border: 2px dashed #8a2be2;
+            background: #fff;
+            border-radius: 1rem;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+        }
+
+        .list-group-item:hover {
+            cursor: pointer;
+            background-color: #e9ecef;
+        }
+
+        .selected-layer-item {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        .text-muted-custom {
+            color: #6c757d;
+        }
+
+        .btn-icon i {
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="container-fluid g-0">
+    <div class="row h-100 g-0">
+        <div class="col-3 p-3" id="editorControls">
+            <h4 class="mb-3 card-title-custom fw-bold"><i class="bi bi-id-card-fill me-2"></i>Escáner de DNI/INE</h4>
+
+            <div class="card card-custom mb-3">
+                <div class="card-header bg-white border-bottom-0">
+                    <h6 class="card-title-custom mb-0">Cargar y Superponer</h6>
+                </div>
+                <div class="card-body">
+                    <label for="mainImageInput" class="form-label">Cargar imagen de la cara principal:</label>
+                    <input type="file" class="form-control mb-2" id="mainImageInput" accept="image/*" />
+                    <label for="layerImageInput" class="form-label">Cargar imagen del reverso:</label>
+                    <input type="file" class="form-control" id="layerImageInput" accept="image/*" />
+                </div>
+            </div>
+
+            <div class="card card-custom mb-3" id="editingTools" style="display:none;">
+                <div class="card-header bg-white border-bottom-0">
+                    <h6 class="card-title-custom mb-0">Herramientas de Edición</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="mt-3 card-title-custom">Ajustes</h6>
+                    <div class="d-grid gap-2 mb-3">
+                        <div class="mb-2">
+                            <label for="brightnessRange" class="form-label">Brillo</label>
+                            <input type="range" class="form-range" id="brightnessRange" min="0" max="200" value="100">
+                        </div>
+                        <div class="mb-2">
+                            <label for="contrastRange" class="form-label">Contraste</label>
+                            <input type="range" class="form-range" id="contrastRange" min="0" max="200" value="100">
+                        </div>
+                        <div class="mb-2">
+                            <label for="saturationRange" class="form-label">Saturación</label>
+                            <input type="range" class="form-range" id="saturationRange" min="0" max="200" value="100">
+                        </div>
+                        <button id="grayscaleBtn" class="btn btn-outline-dark btn-icon"><i
+                                class="bi bi-circle-fill me-2"></i>Blanco y Negro</button>
+                    </div>
+
+                    <h6 class="mt-3 card-title-custom">Tamaño y Posición</h6>
+                    <div class="d-grid gap-2 mb-3">
+                        <div class="input-group">
+                            <label class="input-group-text" for="layoutSelect">Diseño:</label>
+                            <select class="form-select" id="layoutSelect">
+                                <option value="none">Manual</option>
+                                <option value="side-by-side">Lado a Lado</option>
+                                <option value="stacked">Una Arriba de Otra</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text" for="sizeRange">Escala</label>
+                            <span class="input-group-text" id="sizeValue">100%</span>
+                            <input type="range" class="form-range" id="sizeRange" min="0.5" max="2.0" step="0.1"
+                                value="1.0">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text" for="verticalPositionRange">Posición Vertical</label>
+                            <input type="range" class="form-range" id="verticalPositionRange" min="0" max="100"
+                                value="50">
+                        </div>
+                    </div>
+
+                    <h6 class="mt-3 card-title-custom">Capas</h6>
+                    <div id="layerList" class="list-group mb-3"></div>
+
+                    <h6 class="mt-3 card-title-custom">Historial</h6>
+                    <div class="d-flex gap-2 mb-3">
+                        <button id="undoBtn" class="btn btn-outline-secondary btn-icon" disabled><i
+                                class="bi bi-arrow-counterclockwise me-2"></i>Deshacer</button>
+                        <button id="redoBtn" class="btn btn-outline-secondary btn-icon" disabled><i
+                                class="bi bi-arrow-clockwise me-2"></i>Rehacer</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-custom" id="downloadTools" style="display:none;">
+                <div class="card-header bg-white border-bottom-0">
+                    <h6 class="card-title-custom mb-0">Descargar Imagen</h6>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    <button id="downloadBtn" class="btn btn-custom btn-icon"><i
+                            class="bi bi-cloud-arrow-down me-2"></i>Descargar Editada</button>
+                    <div class="input-group">
+                        <label class="input-group-text" for="downloadFormat">Formato:</label>
+                        <select class="form-select" id="downloadFormat">
+                            <option value="png" selected>PNG (Transparencia)</option>
+                            <option value="jpeg">JPEG</option>
+                            <option value="webp">WEBP</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-9 p-3 d-flex flex-column align-items-center justify-content-center">
+            <div id="canvasContainer" class="canvas-wrap shadow-lg" style="display:none;">
+                <canvas id="imageCanvas"></canvas>
+            </div>
+            <div class="text-center p-5" id="infoMessage">
+                <h3 class="card-title-custom">Carga una imagen para empezar a editar</h3>
+                <p class="text-muted-custom">Arrastra y suelta un archivo o usa los botones de "Cargar".</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content card-custom">
+                <div class="modal-header bg-white border-bottom-0">
+                    <h5 class="modal-title card-title-custom" id="cropModalLabel">Herramientas de Recorte</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body d-flex flex-column align-items-center">
+                    <div class="d-flex gap-2 mb-3">
+                        <button id="modalCropRectBtn" class="btn btn-custom btn-icon"><i
+                                class="bi bi-scissors me-2"></i>Recorte Rectangular</button>
+                        <button id="modalCropPolyBtn" class="btn btn-outline-warning btn-icon"><i
+                                class="bi bi-bounding-box-circles me-2"></i>4 Puntos (Corrección)</button>
+                    </div>
+                    <div id="modalCanvasContainer" class="canvas-wrap shadow-sm">
+                        <canvas id="modalCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between bg-white border-top-0">
+                    <button id="modalApplyCropBtn" class="btn btn-custom" disabled><i
+                            class="bi bi-check-circle-fill me-2"></i>Aplicar Recorte</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        /*****************************************************************
+         * Estado Global y Variables
+         *****************************************************************/
+        let imageCanvas = document.getElementById('imageCanvas');
+        let ctx = imageCanvas.getContext('2d');
+        let layers = [];
+        let editingHistory = [];
+        let historyIndex = -1;
+        let currentMode = 'none';
+
+        let isDragging = false;
+        let selectedLayerIndex = -1;
+        let dragStartX, dragStartY;
+
+        let isSelectingRect = false;
+        let startX = 0,
+            startY = 0,
+            currentX = 0,
+            currentY = 0;
+
+        let handles = [];
+        const HANDLE_RADIUS = 7;
+        let activeHandleIndex = -1;
+
+        const mainImageInput = document.getElementById('mainImageInput');
+        const layerImageInput = document.getElementById('layerImageInput');
+        const editingTools = document.getElementById('editingTools');
+        const downloadTools = document.getElementById('downloadTools');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const infoMessage = document.getElementById('infoMessage');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const grayscaleBtn = document.getElementById('grayscaleBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadFormat = document.getElementById('downloadFormat');
+        const layerList = document.getElementById('layerList');
+        const brightnessRange = document.getElementById('brightnessRange');
+        const contrastRange = document.getElementById('contrastRange');
+        const saturationRange = document.getElementById('saturationRange');
+        const layoutSelect = document.getElementById('layoutSelect');
+        const sizeRange = document.getElementById('sizeRange');
+        const verticalPositionRange = document.getElementById('verticalPositionRange');
+        // Agregado el elemento para mostrar el valor de la escala
+        const sizeValue = document.getElementById('sizeValue');
+
+        const cropModal = new bootstrap.Modal(document.getElementById('cropModal'));
+        const modalCanvas = document.getElementById('modalCanvas');
+        const modalCtx = modalCanvas.getContext('2d');
+        const modalCanvasContainer = document.getElementById('modalCanvasContainer');
+        const modalApplyCropBtn = document.getElementById('modalApplyCropBtn');
+        const modalCropRectBtn = document.getElementById('modalCropRectBtn');
+        const modalCropPolyBtn = document.getElementById('modalCropPolyBtn');
+        let modalMode = 'none';
+
+        // Dimensiones de una hoja carta a 300 DPI
+        const LETTER_WIDTH_PX = 2550;
+        const LETTER_HEIGHT_PX = 3300;
+        // Dimensiones aproximadas de una INE/DNI en mm, convertidas a píxeles a 300 DPI
+        const ID_CARD_WIDTH_PX = 300 * (85.6 / 25.4);
+        const ID_CARD_HEIGHT_PX = 300 * (53.98 / 25.4);
+
+        /*****************************************************************
+         * Gestión de Historial y Capas
+         *****************************************************************/
+        function saveState() {
+            if (historyIndex < editingHistory.length - 1) {
+                editingHistory = editingHistory.slice(0, historyIndex + 1);
+            }
+
+            const stateToSave = {
+                layers: layers.map(layer => ({
+                    x: layer.x,
+                    y: layer.y,
+                    width: layer.width,
+                    height: layer.height,
+                    visible: layer.visible,
+                    alpha: layer.alpha,
+                    imgSrc: layer.img.src,
+                    fileName: layer.fileName
+                }))
+            };
+
+            editingHistory.push(stateToSave);
+            historyIndex++;
+            updateHistoryButtons();
+        }
+
+        function updateHistoryButtons() {
+            undoBtn.disabled = historyIndex <= 0;
+            redoBtn.disabled = historyIndex >= editingHistory.length - 1;
+        }
+
+        function restoreState(state) {
+            layers = [];
+            let loadedCount = 0;
+            if (state.layers.length === 0) {
+                redrawCanvas();
+                return;
+            }
+
+            state.layers.forEach((savedLayer, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    layers.push({
+                        ...savedLayer,
+                        img: img
+                    });
+                    loadedCount++;
+                    if (loadedCount === state.layers.length) {
+                        redrawCanvas();
+                        updateHistoryButtons();
+                        updateLayerList();
+                    }
+                };
+                img.src = savedLayer.imgSrc;
+            });
+            if (state.layers.length === 0) {
+                redrawCanvas();
+                updateHistoryButtons();
+                updateLayerList();
+            }
+        }
+
+        undoBtn.addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState(editingHistory[historyIndex]);
+            }
+        });
+
+        redoBtn.addEventListener('click', () => {
+            if (historyIndex < editingHistory.length - 1) {
+                historyIndex++;
+                restoreState(editingHistory[historyIndex]);
+            }
+        });
+
+        function moveLayer(fromIndex, toIndex) {
+            if (toIndex < 0 || toIndex >= layers.length) return;
+            const [movedLayer] = layers.splice(fromIndex, 1);
+            layers.splice(toIndex, 0, movedLayer);
+            selectedLayerIndex = toIndex;
+            redrawCanvas();
+            saveState();
+            updateLayerList();
+        }
+
+        function updateLayerList() {
+            layerList.innerHTML = '';
+            // Invertir el orden para que la primera capa (imagen principal) esté arriba en la UI
+            const reversedLayers = [...layers].reverse();
+            reversedLayers.forEach((layer, originalIndex) => {
+                // Calcular el índice real en el array 'layers'
+                const index = layers.length - 1 - originalIndex;
+
+                const layerItem = document.createElement('div');
+                layerItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                if (index === selectedLayerIndex) {
+                    layerItem.classList.add('selected-layer-item');
+                }
+                layerItem.innerHTML = `
+                <span>${layer.fileName}</span>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-secondary move-up-btn" data-index="${index}" ${index === layers.length - 1 ? 'disabled' : ''}><i class="bi bi-arrow-up-circle-fill"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary move-down-btn" data-index="${index}" ${index === 0 ? 'disabled' : ''}><i class="bi bi-arrow-down-circle-fill"></i></button>
+                    <button class="btn btn-sm btn-outline-dark crop-btn" data-index="${index}"><i class="bi bi-scissors" style="pointer-events: none;"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="bi bi-trash-fill"></i></button>
+                </div>
+            `;
+                layerItem.addEventListener('click', () => {
+                    selectedLayerIndex = index;
+                    redrawCanvas();
+                    updateLayerList();
+                });
+                layerList.appendChild(layerItem);
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(e.target.dataset.index);
+                    layers.splice(index, 1);
+                    selectedLayerIndex = -1;
+                    redrawCanvas();
+                    saveState();
+                    // Reiniciar inputs solo si no quedan capas
+                    if (layers.length === 0) {
+                        mainImageInput.value = '';
+                        layerImageInput.value = '';
+                        // Ocultar la zona de edición
+                        editingTools.style.display = 'none';
+                        downloadTools.style.display = 'none';
+                        canvasContainer.style.display = 'none';
+                        infoMessage.style.display = 'block';
+                    }
+                    updateLayerList();
+                });
+            });
+
+            document.querySelectorAll('.move-up-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(e.target.dataset.index);
+                    moveLayer(index, index + 1);
+                });
+            });
+
+            document.querySelectorAll('.move-down-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(e.target.dataset.index);
+                    moveLayer(index, index - 1);
+                });
+            });
+
+            document.querySelectorAll('.crop-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(e.target.dataset.index);
+                    selectedLayerIndex = index;
+                    openCropModal(layers[selectedLayerIndex]);
+                });
+            });
+        }
+
+        /*****************************************************************
+         * SECCIÓN 1: Carga de Imágenes y Capas
+         *****************************************************************/
+        function setCanvasToLetterSize() {
+            const parent = canvasContainer.parentElement;
+            const scale = Math.min(
+                (parent.clientWidth - 32) / LETTER_WIDTH_PX,
+                (parent.clientHeight - 32) / LETTER_HEIGHT_PX
+            );
+            imageCanvas.width = LETTER_WIDTH_PX;
+            imageCanvas.height = LETTER_HEIGHT_PX;
+            canvasContainer.style.width = imageCanvas.width * scale + 'px';
+            canvasContainer.style.height = imageCanvas.height * scale + 'px';
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+
+            // Dibujar el fondo blanco del lienzo
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
+
+            ctx.filter = `
+            brightness(${brightnessRange.value}%)
+            contrast(${contrastRange.value}%)
+            saturate(${saturationRange.value}%)
+        `;
+
+            layers.forEach((layer, index) => {
+                if (layer.visible) {
+                    ctx.globalAlpha = layer.alpha;
+                    ctx.drawImage(layer.img, layer.x, layer.y, layer.width, layer.height);
+                    ctx.globalAlpha = 1;
+                    if (index === selectedLayerIndex) {
+                        ctx.strokeStyle = '#0d6efd';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(layer.x, layer.y, layer.width, layer.height);
+                        ctx.fillStyle = '#0d6efd';
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(layer.x + layer.width, layer.y + layer.height, HANDLE_RADIUS, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                }
+            });
+
+            ctx.filter = 'none';
+        }
+
+        function resetAndShowEditor() {
+            editingHistory = [];
+            historyIndex = -1;
+            layers = [];
+            selectedLayerIndex = -1;
+            setCanvasToLetterSize();
+            redrawCanvas();
+            editingTools.style.display = 'block';
+            downloadTools.style.display = 'block';
+            canvasContainer.style.display = 'block';
+            infoMessage.style.display = 'none';
+            saveState();
+            updateLayerList();
+        }
+
+        function addImageAsLayer(file, isMainImage = false) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    let layer;
+                    const scaleFactor = parseFloat(sizeRange.value);
+                    const scaledWidth = ID_CARD_WIDTH_PX * scaleFactor;
+                    const scaledHeight = ID_CARD_HEIGHT_PX * scaleFactor;
+
+                    if (isMainImage) {
+                        resetAndShowEditor();
+                        layer = {
+                            img: img,
+                            x: 50,
+                            y: 50,
+                            width: scaledWidth,
+                            height: scaledHeight,
+                            alpha: 1,
+                            visible: true,
+                            fileName: file.name
+                        };
+                    } else {
+                        layer = {
+                            img: img,
+                            x: 50 + ID_CARD_WIDTH_PX + 20,
+                            y: 50,
+                            width: scaledWidth,
+                            height: scaledHeight,
+                            alpha: 1,
+                            visible: true,
+                            fileName: file.name
+                        };
+                    }
+
+                    layers.push(layer);
+                    selectedLayerIndex = layers.length - 1;
+                    applyLayout();
+                    saveState();
+                    updateLayerList();
+
+                    // Ya no se resetean los inputs aquí
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        mainImageInput.addEventListener('change', (e) => addImageAsLayer(e.target.files[0], true));
+        layerImageInput.addEventListener('change', (e) => addImageAsLayer(e.target.files[0]));
+
+        brightnessRange.addEventListener('input', redrawCanvas);
+        contrastRange.addEventListener('input', redrawCanvas);
+        saturationRange.addEventListener('input', redrawCanvas);
+
+        function applyLayout() {
+            const layout = layoutSelect.value;
+            const scaleFactor = parseFloat(sizeRange.value);
+            const cardWidth = ID_CARD_WIDTH_PX * scaleFactor;
+            const cardHeight = ID_CARD_HEIGHT_PX * scaleFactor;
+
+            // Posición vertical basada en el slider (0-100%)
+            const verticalOffsetPercent = parseFloat(verticalPositionRange.value) / 100;
+
+            layers.forEach(layer => {
+                layer.width = cardWidth;
+                layer.height = cardHeight;
+            });
+
+            if (layout === 'side-by-side' && layers.length >= 2) {
+                const totalWidth = cardWidth * 2 + 50;
+                const startX = (imageCanvas.width - totalWidth) / 2;
+
+                // Ajustar posición vertical para ambas imágenes
+                const totalHeight = cardHeight; // Solo una altura para el cálculo
+                const startY = (imageCanvas.height - totalHeight) * verticalOffsetPercent;
+
+                layers[0].x = startX;
+                layers[0].y = startY;
+                layers[1].x = startX + cardWidth + 50;
+                layers[1].y = startY;
+            } else if (layout === 'stacked' && layers.length >= 2) {
+                const totalHeight = cardHeight * 2 + 50;
+                const startY = (imageCanvas.height - totalHeight) * verticalOffsetPercent;
+
+                layers[0].x = (imageCanvas.width - cardWidth) / 2;
+                layers[0].y = startY;
+                layers[1].x = (imageCanvas.width - cardWidth) / 2;
+                layers[1].y = startY + cardHeight + 50;
+            } else {
+                // Cuando es "Manual" o menos de 2 capas, las imágenes se colocan en el centro horizontal
+                // y la posición vertical se ajusta con el slider.
+                layers.forEach(layer => {
+                    layer.x = (imageCanvas.width - layer.width) / 2;
+                    layer.y = (imageCanvas.height - layer.height) * verticalOffsetPercent;
+                });
+            }
+            redrawCanvas();
+        }
+
+        layoutSelect.addEventListener('change', applyLayout);
+        sizeRange.addEventListener('input', applyLayout);
+        verticalPositionRange.addEventListener('input', applyLayout); // Nuevo listener
+
+        // Listener para el nuevo elemento de escala
+        sizeRange.addEventListener('input', () => {
+            const percentage = Math.round(sizeRange.value * 100);
+            sizeValue.textContent = `${percentage}%`;
+            applyLayout();
+        });
+
+
+        /*****************************************************************
+         * SECCIÓN 2: Interacción con el Lienzo (Arrastrar y Recortar)
+         *****************************************************************/
+        interact('#imageCanvas').draggable({
+            listeners: {
+                start(event) {
+                    selectedLayerIndex = -1;
+                    const rect = imageCanvas.getBoundingClientRect();
+                    const scale = imageCanvas.width / rect.width;
+                    const mouseX = (event.clientX - rect.left) * scale;
+                    const mouseY = (event.clientY - rect.top) * scale;
+                    layers.forEach((layer, index) => {
+                        if (mouseX > layer.x && mouseX < layer.x + layer.width &&
+                            mouseY > layer.y && mouseY < layer.y + layer.height) {
+                            selectedLayerIndex = index;
+                            dragStartX = mouseX - layer.x;
+                            dragStartY = mouseY - layer.y;
+                            updateLayerList();
+                            redrawCanvas();
+                        }
+                    });
+                },
+                move(event) {
+                    if (selectedLayerIndex !== -1) {
+                        const rect = imageCanvas.getBoundingClientRect();
+                        const scale = imageCanvas.width / rect.width;
+                        layers[selectedLayerIndex].x = (event.clientX - rect.left) * scale - dragStartX;
+                        layers[selectedLayerIndex].y = (event.clientY - rect.top) * scale - dragStartY;
+                        redrawCanvas();
+                    }
+                },
+                end(event) {
+                    if (selectedLayerIndex !== -1) {
+                        saveState();
+                    }
+                }
+            }
+        });
+
+        grayscaleBtn.addEventListener('click', () => {
+            if (selectedLayerIndex !== -1) {
+                const layer = layers[selectedLayerIndex];
+                applyFilterToImage(layer.img, 'grayscale', (newImg) => {
+                    layer.img = newImg;
+                    redrawCanvas();
+                    saveState();
+                });
+            } else {
+                // Si no hay capa seleccionada, podrías aplicar al lienzo completo si lo deseas,
+                // o simplemente ignorar el evento o mostrar un mensaje.
+                alert("Selecciona una capa para aplicar el filtro.");
+            }
+        });
+
+        function applyFilterToImage(imgElement, filterType, callback) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = imgElement.naturalWidth;
+            tempCanvas.height = imgElement.naturalHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(imgElement, 0, 0);
+
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            const data = imageData.data;
+
+            if (filterType === 'grayscale') {
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    data[i] = avg; // Red
+                    data[i + 1] = avg; // Green
+                    data[i + 2] = avg; // Blue
+                }
+            }
+            // Agrega más filtros aquí si es necesario
+
+            tempCtx.putImageData(imageData, 0, 0);
+
+            const newImg = new Image();
+            newImg.onload = () => {
+                callback(newImg);
+            };
+            newImg.src = tempCanvas.toDataURL();
+        }
+
+        /*****************************************************************
+         * SECCIÓN 3: Modal de Recorte
+         *****************************************************************/
+        function openCropModal(layer) {
+            if (!layer) return;
+
+            modalCanvas.width = layer.img.naturalWidth;
+            modalCanvas.height = layer.img.naturalHeight;
+            modalCtx.drawImage(layer.img, 0, 0);
+
+            const parent = modalCanvasContainer.parentElement;
+            const containerWidth = parent.clientWidth - 32;
+            const containerHeight = parent.clientHeight - 32;
+            const scale = Math.min(
+                containerWidth / modalCanvas.width,
+                containerHeight / modalCanvas.height
+            );
+            modalCanvasContainer.style.width = modalCanvas.width * scale + 'px';
+            modalCanvasContainer.style.height = modalCanvas.height * scale + 'px';
+
+            modalApplyCropBtn.disabled = true;
+
+            modalCanvas.onmousedown = null;
+            modalCanvas.onmousemove = null;
+            modalCanvas.onmouseup = null;
+            modalCanvas.onmouseleave = null;
+
+            cropModal.show();
+        }
+
+        function initModalRectCrop() {
+            modalMode = 'rect-crop';
+            isSelectingRect = false;
+            modalApplyCropBtn.disabled = true;
+            drawModalCanvas();
+
+            // Inicializar los handles en la imagen a tamaño natural
+            handles = [
+                {
+                    x: 50,
+                    y: 50
+                },
+                {
+                    x: modalCanvas.width - 50,
+                    y: 50
+                },
+                {
+                    x: modalCanvas.width - 50,
+                    y: modalCanvas.height - 50
+                },
+                {
+                    x: 50,
+                    y: modalCanvas.height - 50
+                }
+            ];
+
+            drawPolyHandles();
+
+            const rect = modalCanvas.getBoundingClientRect();
+            const scaleX = modalCanvas.width / rect.width;
+            const scaleY = modalCanvas.height / rect.height;
+
+            modalCanvas.onmousedown = (e) => {
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
+                activeHandleIndex = -1;
+                handles.forEach((handle, index) => {
+                    const dx = handle.x - mouseX;
+                    const dy = handle.y - mouseY;
+                    if (Math.sqrt(dx * dx + dy * dy) < 20) {
+                        activeHandleIndex = index;
+                    }
+                });
+            };
+
+            modalCanvas.onmousemove = (e) => {
+                if (activeHandleIndex === -1) return;
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
+
+                if (activeHandleIndex === 0) { // top-left
+                    handles[0].x = mouseX;
+                    handles[0].y = mouseY;
+                    handles[1].y = mouseY;
+                    handles[3].x = mouseX;
+                } else if (activeHandleIndex === 1) { // top-right
+                    handles[1].x = mouseX;
+                    handles[1].y = mouseY;
+                    handles[0].y = mouseY;
+                    handles[2].x = mouseX;
+                } else if (activeHandleIndex === 2) { // bottom-right
+                    handles[2].x = mouseX;
+                    handles[2].y = mouseY;
+                    handles[3].y = mouseY;
+                    handles[1].x = mouseX;
+                } else if (activeHandleIndex === 3) { // bottom-left
+                    handles[3].x = mouseX;
+                    handles[3].y = mouseY;
+                    handles[2].y = mouseY;
+                    handles[0].x = mouseX;
+                }
+
+                drawModalCanvas();
+                drawPolyHandles();
+            };
+
+            modalCanvas.onmouseup = () => {
+                activeHandleIndex = -1;
+                modalApplyCropBtn.disabled = false;
+            };
+        }
+
+        function initModalPolyCrop() {
+            modalMode = 'poly-crop';
+            isSelectingRect = false;
+            modalApplyCropBtn.disabled = true;
+
+            // Inicializar los handles en la imagen a tamaño natural
+            handles = [
+                {
+                    x: 50,
+                    y: 50
+                },
+                {
+                    x: modalCanvas.width - 50,
+                    y: 50
+                },
+                {
+                    x: modalCanvas.width - 50,
+                    y: modalCanvas.height - 50
+                },
+                {
+                    x: 50,
+                    y: modalCanvas.height - 50
+                }
+            ];
+
+            drawModalCanvas();
+            drawPolyHandles();
+
+            const rect = modalCanvas.getBoundingClientRect();
+            const scaleX = modalCanvas.width / rect.width;
+            const scaleY = modalCanvas.height / rect.height;
+
+            modalCanvas.onmousedown = (e) => {
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
+                activeHandleIndex = -1;
+                handles.forEach((handle, index) => {
+                    const dx = handle.x - mouseX;
+                    const dy = handle.y - mouseY;
+                    // Usamos un umbral de 20 para el clic
+                    if (Math.sqrt(dx * dx + dy * dy) < 20) {
+                        activeHandleIndex = index;
+                    }
+                });
+            };
+
+            modalCanvas.onmousemove = (e) => {
+                if (activeHandleIndex === -1) return;
+                handles[activeHandleIndex].x = (e.clientX - rect.left) * scaleX;
+                handles[activeHandleIndex].y = (e.clientY - rect.top) * scaleY;
+                drawModalCanvas();
+                drawPolyHandles();
+            };
+
+            modalCanvas.onmouseup = () => {
+                activeHandleIndex = -1;
+                modalApplyCropBtn.disabled = false;
+            };
+        }
+
+        function drawModalCanvas() {
+            modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+            const layer = layers[selectedLayerIndex];
+            if (layer && layer.img) {
+                modalCtx.drawImage(layer.img, 0, 0);
+            }
+        }
+
+        function drawRectSelection() {
+            // Este método ya no se usa directamente para el dibujo interactivo
+            // Los handles se dibujan con drawPolyHandles()
+        }
+
+        function drawPolyHandles() {
+            modalCtx.strokeStyle = '#0d6efd';
+            modalCtx.lineWidth = 2;
+            modalCtx.beginPath();
+            modalCtx.moveTo(handles[0].x, handles[0].y);
+            modalCtx.lineTo(handles[1].x, handles[1].y);
+            modalCtx.lineTo(handles[2].x, handles[2].y);
+            modalCtx.lineTo(handles[3].x, handles[3].y);
+            modalCtx.closePath();
+            modalCtx.stroke();
+
+            handles.forEach(handle => {
+                modalCtx.fillStyle = '#0d6efd';
+                modalCtx.beginPath();
+                modalCtx.arc(handle.x, handle.y, 10, 0, Math.PI * 2);
+                modalCtx.fill();
+            });
+        }
+
+        modalCropRectBtn.addEventListener('click', initModalRectCrop);
+        modalCropPolyBtn.addEventListener('click', initModalPolyCrop);
+
+        modalApplyCropBtn.addEventListener('click', () => {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            const originalImage = layers[selectedLayerIndex].img;
+
+            let croppedImageURL;
+
+            if (modalMode === 'rect-crop') {
+                const x = Math.min(handles[0].x, handles[1].x, handles[2].x, handles[3].x);
+                const y = Math.min(handles[0].y, handles[1].y, handles[2].y, handles[3].y);
+                const width = Math.max(handles[0].x, handles[1].x, handles[2].x, handles[3].x) - x;
+                const height = Math.max(handles[0].y, handles[1].y, handles[2].y, handles[3].y) - y;
+
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                tempCtx.drawImage(originalImage, x, y, width, height, 0, 0, width, height);
+                croppedImageURL = tempCanvas.toDataURL();
+            } else if (modalMode === 'poly-crop') {
+                if (typeof cv === 'undefined' || !cv.Mat) {
+                    alert("OpenCV.js no está cargado. Espera unos segundos y vuelve a intentarlo.");
+                    return;
+                }
+
+                // Ordenar los handles para que el orden de los puntos sea consistente
+                const sortedHandles = [...handles].sort((a, b) => a.y - b.y);
+                const topHandles = sortedHandles.slice(0, 2).sort((a, b) => a.x - b.x);
+                const bottomHandles = sortedHandles.slice(2, 4).sort((a, b) => a.x - b.x);
+
+                const srcPoints = [
+                    topHandles[0], // top-left
+                    topHandles[1], // top-right
+                    bottomHandles[1], // bottom-right
+                    bottomHandles[0] // bottom-left
+                ];
+
+                const outputWidth = Math.max(
+                    Math.hypot(srcPoints[0].x - srcPoints[1].x, srcPoints[0].y - srcPoints[1].y),
+                    Math.hypot(srcPoints[3].x - srcPoints[2].x, srcPoints[3].y - srcPoints[2].y)
+                );
+                const outputHeight = Math.max(
+                    Math.hypot(srcPoints[0].x - srcPoints[3].x, srcPoints[0].y - srcPoints[3].y),
+                    Math.hypot(srcPoints[1].x - srcPoints[2].x, srcPoints[1].y - srcPoints[2].y)
+                );
+
+                const src = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    srcPoints[0].x, srcPoints[0].y,
+                    srcPoints[1].x, srcPoints[1].y,
+                    srcPoints[2].x, srcPoints[2].y,
+                    srcPoints[3].x, srcPoints[3].y
+                ]);
+
+                const dst = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    0, 0,
+                    outputWidth, 0,
+                    outputWidth, outputHeight,
+                    0, outputHeight
+                ]);
+
+                let M = cv.getPerspectiveTransform(src, dst);
+                let dsize = new cv.Size(outputWidth, outputHeight);
+
+                let srcMat = cv.imread(originalImage);
+                let dstMat = new cv.Mat();
+
+                cv.warpPerspective(srcMat, dstMat, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+                cv.imshow(tempCanvas, dstMat);
+                croppedImageURL = tempCanvas.toDataURL();
+
+                src.delete();
+                dst.delete();
+                M.delete();
+                srcMat.delete();
+                dstMat.delete();
+            }
+
+            if (croppedImageURL) {
+                const newImage = new Image();
+                newImage.onload = () => {
+                    layers[selectedLayerIndex].img = newImage;
+                    layers[selectedLayerIndex].width = ID_CARD_WIDTH_PX;
+                    layers[selectedLayerIndex].height = ID_CARD_HEIGHT_PX;
+                    redrawCanvas();
+                    saveState();
+                };
+                newImage.src = croppedImageURL;
+            }
+
+            cropModal.hide();
+        });
+
+        /*****************************************************************
+         * SECCIÓN 4: Funcionalidad de Descarga
+         *****************************************************************/
+        downloadBtn.addEventListener('click', () => {
+            const format = downloadFormat.value;
+            const fileName = `escaneo-dni.${format}`;
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = imageCanvas.width;
+            finalCanvas.height = imageCanvas.height;
+            const finalCtx = finalCanvas.getContext('2d');
+
+            // Asegurar fondo blanco en la descarga
+            finalCtx.fillStyle = '#FFFFFF';
+            finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+            finalCtx.filter = `
+          brightness(${brightnessRange.value}%)
+          contrast(${contrastRange.value}%)
+          saturate(${saturationRange.value}%)
+      `;
+
+            // Dibujar las capas en el orden correcto
+            layers.forEach(layer => {
+                finalCtx.drawImage(
+                    layer.img,
+                    layer.x,
+                    layer.y,
+                    layer.width,
+                    layer.height
+                );
+            });
+
+            if (format === 'pdf') {
+                const {
+                    jsPDF
+                } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'px',
+                    format: [finalCanvas.width, finalCanvas.height]
+                });
+
+                // Comprimir la imagen antes de guardarla en el PDF
+                const imgDataURL = finalCanvas.toDataURL('image/jpeg', 0.8);
+
+                pdf.addImage(imgDataURL, 'JPEG', 0, 0, finalCanvas.width, finalCanvas.height);
+                pdf.save(fileName);
+            } else {
+                finalCanvas.toBlob(blob => {
+                    saveAs(blob, fileName);
+                }, 'image/' + format, 1);
+            }
+        });
+
+        // Listener para los botones de recorte del panel principal (ahora abren el modal)
+        document.querySelectorAll('.crop-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(e.target.dataset.index);
+                selectedLayerIndex = index;
+                openCropModal(layers[selectedLayerIndex]);
+            });
+        });
+
+          // Si el usuario no ha iniciado sesión, redirige a la página de inicio.
+        // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.replace('Inicio.html');
+        }
+
+        // Esta función se activará al hacer clic en "Cerrar sesión"
+        function cerrarSesion() {
+            sessionStorage.removeItem("isLoggedIn");
+            window.location.replace('Inicio.html');
+        }
+    </script>
+</body>
+
+</html>

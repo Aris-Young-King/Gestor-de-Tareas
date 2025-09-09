@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f0ff;
+            /* Lila muy claro para el fondo */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background-color: #6a1a8c;
+            /* Lila oscuro para el encabezado */
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-weight: 700;
+        }
+
+        .card-custom {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: white;
+            color: #4a4a4a;
+        }
+
+        .card-custom:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-body-custom {
+            padding: 2rem;
+        }
+
+        .card-title-custom {
+            color: #8a2be2;
+            /* Lila más intenso para los títulos */
+            font-weight: 600;
+        }
+
+        .card-text-custom {
+            color: #6c757d;
+        }
+
+        .btn-custom {
+            background-color: #8a2be2;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s;
+        }
+
+        .btn-custom:hover {
+            background-color: #6a1a8c;
+        }
+
+        .icon {
+            font-size: 2.5rem;
+            color: #8a2be2;
+            margin-bottom: 1rem;
+        }
+
+        .footer .text-muted {
+            color: white !important;
+            font-weight: 500;
+        }
+
+        .footer {
+            background-color: #9e48c3;
+            border-top: 1px solid #dee2e6;
+            
+            bottom: 0;
+            width: 100%;
+        }
+
+        .container {
+            position: relative;
+        }
+
+        .text-muted {
+            cursor: pointer;
+            /* Cambia el cursor para indicar que es interactivo */
+        }
+
+        #mensaje-oculto {
+            position: absolute;
+            bottom: 100%;
+            /* Posiciona el mensaje justo encima del texto */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 105, 180, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            opacity: 0;
+            /* Inicialmente oculto */
+            transition: opacity 0.5s ease-in-out, bottom 0.5s ease-in-out;
+            pointer-events: none;
+            /* No interfiere con otros elementos */
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            /* Asegura que esté por encima de otros elementos */
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="container">
+            <h1 class="display-4"><i class="bi bi-house-heart-fill"></i> Panel de Control <i
+                    class="bi bi-house-heart-fill"></i></h1>
+            <p class="h4 mt-3"> <i class="bi bi-balloon-heart"></i> Creado para hacer tu trabajo más fácil y tu vida más
+                brillante. <i class="bi bi-balloon-heart"></i></p>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row g-4">
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="list_generator.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-file-earmark-excel"></i></div>
+                            <h5 class="card-title card-title-custom">Generador de Listas</h5>
+                            <p class="card-text card-text-custom">Lee archivos de Excel para crear y exportar listas a
+                                formatos PDF o Word.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="curp_validator.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-person-check"></i></div>
+                            <h5 class="card-title card-title-custom">Validador de CURP</h5>
+                            <p class="card-text card-text-custom">Compara CURPs desde un archivo Excel con los nombres
+                                de carpetas en un archivo ZIP.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="zip_image_validator.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-image-fill"></i></div>
+                            <h5 class="card-title card-title-custom">Verificador de Imágenes</h5>
+                            <p class="card-text card-text-custom">Revisa y valida la cantidad de imágenes dentro de cada
+                                carpeta en un archivo ZIP.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="zip_image_manager.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-images"></i></div>
+                            <h5 class="card-title card-title-custom">Gestor de Imágenes en ZIP</h5>
+                            <p class="card-text card-text-custom">Visualiza y edita colecciones de imágenes organizadas
+                                por CURP dentro de un ZIP.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="image_editor.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-pencil-square"></i></div>
+                            <h5 class="card-title card-title-custom">Editor de Imágenes Avanzado</h5>
+                            <p class="card-text card-text-custom">Herramienta completa para manipular imágenes,
+                                recortar, aplicar filtros y más.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="dni-editor.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-credit-card"></i></div>
+                            <h5 class="card-title card-title-custom">Editor de DNI/INE</h5>
+                            <p class="card-text card-text-custom">Herramienta especializada para editar y organizar
+                                imágenes de documentos de identidad.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="pdf_manager.html" class="text-decoration-none">
+                    <div class="card card-custom h-100">
+                        <div class="card-body card-body-custom text-center">
+                            <div class="icon"><i class="bi bi-file-earmark-pdf"></i></div>
+                            <h5 class="card-title card-title-custom">Gestor de PDF</h5>
+                            <p class="card-text card-text-custom">Un conjunto de herramientas para unir, dividir,
+                                extraer páginas y visualizar archivos PDF.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    <footer class="footer mt-auto py-3">
+        <div class="container text-center">
+            <div>
+                <span class="text-muted" id="interact-text">By: 4215 <i class="bi bi-heart-fill"></i></span>
+            <div id="mensaje-oculto">Herramienta creada para el amor de mi vida</div>
+            </div>
+            <div> 
+                <span class="text-muted">Dudas y sugerencias con la pared <i class="bi bi-exclamation-octagon-fill"></i></span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const interactText = document.getElementById('interact-text');
+        const hiddenMessage = document.getElementById('mensaje-oculto');
+
+        // Mostrar mensaje oculto al hacer clic
+        interactText.addEventListener('click', () => {
+            // Mostrar el mensaje
+            hiddenMessage.style.opacity = '1';
+            hiddenMessage.style.bottom = '110%'; // Moverlo un poco hacia arriba para que sea visible
+
+            // Ocultar el mensaje después de 3 segundos
+            setTimeout(() => {
+                hiddenMessage.style.opacity = '0';
+                hiddenMessage.style.bottom = '100%'; // Vuelve a su posición original oculta
+            }, 3000);
+        });
+        // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.replace('Inicio.html');
+        }
+
+        // Esta función se activará al hacer clic en "Cerrar sesión"
+        function cerrarSesion() {
+            sessionStorage.removeItem("isLoggedIn");
+            window.location.replace('Inicio.html');
+        }
+    </script>
+</body>
+
+</html>

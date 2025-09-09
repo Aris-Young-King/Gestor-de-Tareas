@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visor y Editor de Imágenes por CURP (Mejorado)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      overflow: hidden;
+      background: #f0f0ff;
+    }
+
+    #curpList {
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: flex-start;
+    }
+
+    .gallery .card {
+      width: 200px;
+      cursor: pointer;
+    }
+
+    .gallery img {
+      height: 140px;
+      object-fit: cover;
+      width: 100%;
+      display: block;
+    }
+
+    .active-curp {
+      background-color: #8a2be2 !important;
+      color: #fff !important;
+    }
+
+    .modal-body-custom {
+      overflow: hidden;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      display: inline-block;
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+    }
+
+    .handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
+      margin-top: -7px;
+      border-radius: 50%;
+      background: #8a2be2;
+      border: 2px solid #fff;
+      box-shadow: 0 0 6px rgba(13, 110, 253, 0.35);
+      pointer-events: none;
+      display: none;
+    }
+
+    .preview-canvas {
+      border: 1px solid #ccc;
+      background: #fff;
+      height: auto;
+      width: 100%;
+      display: block;
+    }
+
+    .small-muted {
+      font-size: .85rem;
+      color: #6a1a8c;
+    }
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .card .card-body {
+      padding: .4rem .6rem;
+    }
+
+    /* Nuevos estilos de la paleta de colores */
+    .card,
+    #curpList {
+      background-color: #ffffff;
+    }
+
+    h4,
+    h5,
+    h6,
+    .form-label {
+      color: #8a2be2;
+    }
+
+    .btn-primary,
+    .btn-warning,
+    .badge.bg-primary {
+      background-color: #8a2be2 !important;
+      border-color: #8a2be2 !important;
+      color: #fff !important;
+    }
+
+    .btn-primary:hover,
+    .btn-warning:hover {
+      background-color: #6a1a8c !important;
+      border-color: #6a1a8c !important;
+    }
+
+    .btn-success {
+      background-color: #6a1a8c !important;
+      border-color: #6a1a8c !important;
+    }
+
+    .btn-success:hover {
+      background-color: #4b1263 !important;
+      border-color: #4b1263 !important;
+    }
+
+    .btn-outline-primary,
+    .btn-outline-warning {
+      border-color: #8a2be2 !important;
+      color: #8a2be2 !important;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-warning:hover {
+      background-color: #8a2be2 !important;
+      color: #fff !important;
+    }
+
+    .btn-outline-secondary,
+    .btn-secondary,
+    .text-muted,
+    .text-dark-emphasis {
+      color: #6a1a8c !important;
+    }
+
+    .btn-outline-secondary {
+      border-color: #6a1a8c !important;
+    }
+
+    .btn-outline-secondary:hover {
+      background-color: #6a1a8c !important;
+      color: #fff !important;
+    }
+
+    .btn-secondary:hover {
+      background-color: #4b1263 !important;
+      border-color: #4b1263 !important;
+    }
+
+    .alert-info {
+      background-color: #e6e6ff !important;
+      border-color: #8a2be2 !important;
+      color: #6a1a8c !important;
+    }
+
+    .badge.bg-success {
+      background-color: #6a1a8c !important;
+    }
+
+    #gallery {
+      max-height: 90vh;
+      /* límite de altura visible */
+      overflow-y: auto;
+      /* activa scroll vertical */
+      padding-right: 10px;
+      /* espacio para el scrollbar */
+    }
+  </style>
+</head>
+
+<body class="container-fluid">
+  <div class="row h-100">
+    <div class="col-3 border-end p-3 bg-white">
+      <h5 class="mb-3">📂 Buscar CURP</h5>
+      <input id="searchInput" class="form-control mb-3" placeholder="Escribe CURP..." />
+      <div id="summary" class="alert alert-info py-2 px-3 small">
+        <b>Carpetas:</b> 0 <br>
+        <b>Total imágenes:</b> 0
+      </div>
+      <div id="curpList" class="list-group"></div>
+      <div class="mt-3 small text-muted">Arrastra aquí un archivo ZIP que contenga carpetas por CURP con imágenes
+        (jpg/jpeg/png).</div>
+    </div>
+
+    <div class="col-9 p-3">
+      <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <h4 id="selectedCurp" class="mb-0">Seleccione un CURP</h4>
+        <div class="d-flex gap-2">
+          <button id="downloadEditedBtn" class="btn btn-outline-primary d-none btn-icon">⬇️ <span>Descargar solo
+              editadas</span></button>
+          <button id="downloadZipBtn" class="btn btn-success d-none btn-icon">⬇️ <span>Descargar todo</span></button>
+        </div>
+      </div>
+      <div id="gallery" class="gallery mt-3 "></div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-body modal-body-custom">
+          <div class="row g-4">
+            <div class="col-12 col-xl-8 p-3">
+              <div id="canvasContainer" class="canvas-wrap">
+                <canvas id="imageCanvas" width="800" height="600"></canvas>
+              </div>
+              <div class="small-muted mt-2"><span id="modeHint">Seleccione modo de recorte.</span></div>
+            </div>
+            <div class="col-12 col-xl-4 p-3">
+              <h6 class="mb-2">Vista previa en tiempo real</h6>
+              <canvas id="previewCanvas" class="preview-canvas"></canvas>
+              <div class="small-muted mt-2">La vista previa se actualiza mientras ajustas el recorte.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer flex-wrap gap-2">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+
+          <div class="ms-auto d-flex gap-2">
+            <button id="prevBtn" class="btn btn-outline-secondary btn-icon">⏮️ <span>Anterior</span></button>
+            <button id="nextBtn" class="btn btn-outline-secondary btn-icon">⏭️ <span>Siguiente</span></button>
+          </div>
+
+          <button id="cropRectBtn" class="btn btn-primary btn-icon">✂️ <span>Recorte Rectangular</span></button>
+          <button id="cropPolyBtn" class="btn btn-warning btn-icon">📐 <span>Recorte con Corrección (4
+              Puntos)</span></button>
+          <button id="hidePointsBtn" class="btn btn-outline-secondary d-none btn-icon">👁️ <span>Ocultar
+              Puntos</span></button>
+          <button id="resetPointsBtn" class="btn btn-outline-warning d-none btn-icon">🔄 <span>Reset
+              Puntos</span></button>
+          <button id="saveCropBtn" class="btn btn-success d-none btn-icon">💾 <span>Guardar Recorte</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /*****************************************************************
+     * Estado global
+     *****************************************************************/
+    let curpGroups = {};              // { CURP: [zipEntry, ...], ... }
+    let modifiedImages = {};          // { CURP: { 'path/name.jpg': Blob, ... }, ... }
+    let totalImages = 0;
+    let currentCurp = null;
+    let currentFileName = null;
+    let currentIndex = 0;
+
+    // Imagen y recorte
+    let img = new Image();
+    let imgNaturalW = 0, imgNaturalH = 0;
+    let displayW = 0, displayH = 0, scaleToOriginal = 1;
+    let mode = 'rect'; // 'rect' | 'poly'
+    let showHandles = false; // Nuevo estado para controlar la visibilidad de los puntos
+    let rect = null, handles = [];
+    const HANDLE_COUNT = 4;
+    const HANDLE_RADIUS = 7;
+    let handleEls = [];
+    let dragging = null, activeHandleIndex = -1, activeCornerIndex = -1;
+    let lastPointer = { x: 0, y: 0 };
+
+    // Modal & canvases
+    const imageModalEl = document.getElementById('imageModal');
+    const imageModal = new bootstrap.Modal(imageModalEl);
+    const imageCanvas = document.getElementById('imageCanvas');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const ctx = imageCanvas.getContext('2d');
+    const pctx = previewCanvas.getContext('2d');
+
+    // Pool de objectURLs para revocar cuando sea necesario
+    const _urlPool = [];
+    function _createObjectURL(blob) { const u = URL.createObjectURL(blob); _urlPool.push(u); return u; }
+    function _revokeAll() { while (_urlPool.length) URL.revokeObjectURL(_urlPool.pop()); }
+
+    /*****************************************************************
+     * Drag & drop del ZIP
+     *****************************************************************/
+    document.body.addEventListener('dragover', e => e.preventDefault());
+    document.body.addEventListener('drop', async e => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (!file || !file.name.toLowerCase().endsWith('.zip')) {
+        alert('Suelta un archivo ZIP válido (contiene carpetas por CURP con imágenes).');
+        return;
+      }
+      try {
+        const ab = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(ab);
+        curpGroups = {}; modifiedImages = {}; totalImages = 0;
+
+        for (const [path, entry] of Object.entries(zip.files)) {
+          if (entry.dir) continue;
+          if (!/\.(jpe?g|png)$/i.test(path)) continue;
+          const parts = path.split('/');
+          const curp = parts.find(p => /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]{2}$/i.test(p)) || 'SIN_CURP';
+          if (!curpGroups[curp]) curpGroups[curp] = [];
+          curpGroups[curp].push(entry);
+          totalImages++;
+        }
+        renderSummary();
+        renderCurpList();
+        alert('ZIP cargado con éxito. Selecciona un CURP en la lista.');
+      } catch (err) {
+        console.error(err);
+        alert('Error al procesar el ZIP: ' + err.message);
+      }
+    });
+
+    /*****************************************************************
+     * Render UI (lista CURP & resumen)
+     *****************************************************************/
+    function renderSummary() {
+      document.getElementById('summary').innerHTML =
+        `<b>Carpetas:</b> ${Object.keys(curpGroups).length} <br><b>Total imágenes:</b> ${totalImages}`;
+    }
+
+    function renderCurpList(filter = '') {
+      const list = document.getElementById('curpList');
+      list.innerHTML = '';
+      Object.keys(curpGroups).sort()
+        .filter(c => c.toLowerCase().includes(filter.toLowerCase()))
+        .forEach(curp => {
+          const item = document.createElement('button');
+          item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+          const editCount = modifiedImages[curp] ? Object.keys(modifiedImages[curp]).length : 0;
+          item.innerHTML = `
+            <span class="me-2">${curp}</span>
+            <span>
+              <span class="badge bg-primary rounded-pill">${curpGroups[curp].length}</span>
+              ${editCount ? `<span class="badge bg-success rounded-pill ms-1">${editCount} edit.</span>` : ''}
+            </span>`;
+          item.onclick = async () => await showGallery(curp, item);
+          list.appendChild(item);
+        });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', e => renderCurpList(e.target.value));
+
+    /*****************************************************************
+     * Galería (thumbnails)
+     *****************************************************************/
+    async function showGallery(curp, buttonEl) {
+      currentCurp = curp;
+      document.getElementById('selectedCurp').textContent = 'Imágenes de: ' + curp;
+      document.getElementById('downloadZipBtn').classList.remove('d-none');
+      document.getElementById('downloadEditedBtn').classList.remove('d-none');
+      document.querySelectorAll('#curpList button').forEach(b => b.classList.remove('active-curp'));
+      buttonEl.classList.add('active-curp');
+
+      const gallery = document.getElementById('gallery');
+      gallery.innerHTML = '';
+
+      const files = curpGroups[curp] || [];
+      for (let i = 0; i < files.length; i++) {
+        const entry = files[i];
+        try {
+          const blob = modifiedImages[curp]?.[entry.name] || await entry.async('blob');
+          const url = _createObjectURL(blob);
+          const base = entry.name.split('/').pop();
+
+          const card = document.createElement('div');
+          card.className = 'card shadow-sm';
+          card.style.minWidth = '20vw';
+
+          card.innerHTML = `
+      <div class="d-flex flex-wrap">
+        <div class="card m-4" style="width: 800px; height: auto;">
+          <img 
+            src="${url}" 
+            class="card-img-top" 
+            data-filename="${entry.name}" 
+            style="width: 100%; height: auto; object-fit: contain; background: #f8f9fa;"
+          >
+          <div class="card-body text-center">
+            <small 
+              class="text-muted text-truncate d-block" 
+              title="${base}"
+            >
+              ${base}
+            </small>
+          </div>
+        </div>
+      </div>
+    `;
+
+          card.onclick = () => openModal(entry.name, i);
+          gallery.appendChild(card);
+        } catch (err) {
+          console.error('Error cargando thumb', entry.name, err);
+        }
+      }
+
+    }
+
+    /*****************************************************************
+     * Modal: abrir imagen y preparar canvas
+     *****************************************************************/
+    async function openModal(fileName, index) {
+      currentFileName = fileName; currentIndex = index ?? 0;
+      try {
+        const entry = curpGroups[currentCurp][currentIndex];
+        const blob = modifiedImages[currentCurp]?.[fileName] || await entry.async('blob');
+        const url = _createObjectURL(blob);
+        img = new Image();
+        img.onload = () => {
+          imgNaturalW = img.naturalWidth; imgNaturalH = img.naturalHeight;
+          setupCanvasForImage();
+        };
+        img.onerror = (e) => {
+          console.error('Error cargando imagen', e);
+          alert('No se pudo cargar la imagen.');
+        };
+        img.src = url;
+        imageModal.show();
+      } catch (err) {
+        console.error(err);
+        alert('Error abriendo la imagen: ' + err.message);
+      }
+    }
+
+    function setupCanvasForImage() {
+      const modalBody = imageModalEl.querySelector('.modal-body');
+      const maxContainerWidth = modalBody.clientWidth * 0.65;
+      const maxDisplayWidth = Math.max(600, maxContainerWidth);
+      const maxDisplayHeight = 700;
+
+      let w = imgNaturalW, h = imgNaturalH, ratio = w / h;
+      if (w > maxDisplayWidth) { w = maxDisplayWidth; h = Math.round(w / ratio); }
+      if (h > maxDisplayHeight) { h = maxDisplayHeight; w = Math.round(h * ratio); }
+
+      displayW = Math.max(200, Math.round(w));
+      displayH = Math.max(150, Math.round(h));
+      imageCanvas.width = displayW; imageCanvas.height = displayH;
+      canvasContainer.style.width = displayW + 'px'; canvasContainer.style.height = displayH + 'px';
+      scaleToOriginal = imgNaturalW / displayW;
+
+      showHandles = false; // Reinicia a false
+      resetCropPoints();
+      createHandleElements();
+      draw();
+      updatePreview();
+
+      document.getElementById('saveCropBtn').classList.remove('d-none');
+      document.getElementById('hidePointsBtn').classList.add('d-none'); // Ocultar al inicio
+      document.getElementById('resetPointsBtn').classList.add('d-none'); // Ocultar al inicio
+      document.getElementById('modeHint').textContent = 'Seleccione modo de recorte.';
+    }
+
+    /*****************************************************************
+     * Recorte: inicializar y dibujar
+     *****************************************************************/
+    function resetCropPoints() {
+      rect = { x: displayW * 0.1, y: displayH * 0.1, w: displayW * 0.8, h: displayH * 0.8 };
+      handles = [];
+      handles.push({ x: displayW * 0.2, y: displayH * 0.2 }); // Top-left
+      handles.push({ x: displayW * 0.8, y: displayH * 0.2 }); // Top-right
+      handles.push({ x: displayW * 0.8, y: displayH * 0.8 }); // Bottom-right
+      handles.push({ x: displayW * 0.2, y: displayH * 0.8 }); // Bottom-left
+    }
+
+    function createHandleElements() {
+      handleEls.forEach(el => el.remove());
+      handleEls = [];
+      for (let i = 0; i < HANDLE_COUNT; i++) {
+        const el = document.createElement('div');
+        el.className = 'handle';
+        canvasContainer.appendChild(el);
+        handleEls.push(el);
+      }
+      positionHandleElements();
+    }
+
+    function positionHandleElements() {
+      handleEls.forEach((el, i) => {
+        const h = handles[i];
+        el.style.left = (h.x) + 'px';
+        el.style.top = (h.y) + 'px';
+        el.style.display = (mode === 'poly' && showHandles) ? 'block' : 'none';
+      });
+    }
+
+    function draw() {
+      if (!img || !img.src) { ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height); return; }
+      ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+      ctx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
+
+      if (mode === 'rect' && showHandles) {
+        ctx.strokeStyle = '#8a2be2'; ctx.lineWidth = 2;
+        ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+        drawCornerHandlesRect();
+      } else if (mode === 'poly' && showHandles) {
+        ctx.beginPath();
+        ctx.moveTo(handles[0].x, handles[0].y);
+        for (let i = 1; i < handles.length; i++) ctx.lineTo(handles[i].x, handles[i].y);
+        ctx.closePath();
+        ctx.strokeStyle = '#8a2be2'; ctx.lineWidth = 2; ctx.stroke();
+        drawHandles();
+      }
+      ctx.restore();
+      positionHandleElements();
+    }
+
+    function drawCornerHandlesRect() {
+      const corners = [
+        { x: rect.x, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y + rect.h },
+        { x: rect.x, y: rect.y + rect.h }
+      ];
+      ctx.fillStyle = '#8a2be2';
+      for (let c of corners) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, HANDLE_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+
+    function drawHandles() {
+      ctx.fillStyle = '#8a2be2'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      for (let h of handles) {
+        ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE_RADIUS, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+
+    /*****************************************************************
+     * Utilidades geométricas y eventos pointer
+     *****************************************************************/
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function distance(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+    function pointInPolygon(x, y, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x, yi = poly[i].y;
+        const xj = poly[j].x, yj = poly[j].y;
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    let isPointerDown = false;
+    imageCanvas.addEventListener('pointerdown', e => {
+      if (!img || !img.src || !showHandles) return;
+      const box = imageCanvas.getBoundingClientRect();
+      const x = e.clientX - box.left;
+      const y = e.clientY - box.top;
+      isPointerDown = true;
+      lastPointer = { x, y };
+
+      if (mode === 'poly') {
+        for (let i = 0; i < handles.length; i++) {
+          if (distance(handles[i].x, handles[i].y, x, y) <= HANDLE_RADIUS + 6) {
+            activeHandleIndex = i; return;
+          }
+        }
+        if (pointInPolygon(x, y, handles)) {
+          dragging = { type: 'movePoly' };
+          return;
+        }
+      } else {
+        const corners = [
+          { x: rect.x, y: rect.y },
+          { x: x + rect.w, y: rect.y },
+          { x: rect.x + rect.w, y: rect.y + rect.h },
+          { x: rect.x, y: rect.y + rect.h }
+        ];
+        for (let i = 0; i < corners.length; i++) {
+          if (distance(corners[i].x, corners[i].y, x, y) <= HANDLE_RADIUS + 6) {
+            activeCornerIndex = i; return;
+          }
+        }
+        if (x > rect.x && x < rect.x + rect.w && y > rect.y && y < rect.y + rect.h) {
+          dragging = { type: 'moveRect', startX: x, startY: y, origX: rect.x, origY: rect.y };
+          return;
+        }
+        dragging = { type: 'drawRect', startX: x, startY: y };
+      }
+    });
+
+    window.addEventListener('pointermove', e => {
+      if (!isPointerDown || !img || !img.src) return;
+      const box = imageCanvas.getBoundingClientRect();
+      const x = e.clientX - box.left;
+      const y = e.clientY - box.top;
+      const dx = x - lastPointer.x, dy = y - lastPointer.y;
+      lastPointer = { x, y };
+
+      if (mode === 'poly') {
+        if (activeHandleIndex >= 0) {
+          handles[activeHandleIndex].x = clamp(x, 0, displayW);
+          handles[activeHandleIndex].y = clamp(y, 0, displayH);
+          draw(); updatePreview(); return;
+        }
+        if (dragging && dragging.type === 'movePoly') {
+          for (let h of handles) {
+            h.x = clamp(h.x + dx, 0, displayW);
+            h.y = clamp(h.y + dy, 0, displayH);
+          }
+          draw(); updatePreview(); return;
+        }
+      } else {
+        if (activeCornerIndex >= 0) {
+          switch (activeCornerIndex) {
+            case 0: { // top-left
+              const nx = clamp(x, 0, rect.x + rect.w - 10);
+              const ny = clamp(y, 0, rect.y + rect.h - 10);
+              rect.w += rect.x - nx; rect.h += rect.y - ny; rect.x = nx; rect.y = ny; break;
+            }
+            case 1: { // top-right
+              const nx = clamp(x, rect.x + 10, displayW);
+              const ny = clamp(y, 0, rect.y + rect.h - 10);
+              rect.w = nx - rect.x; rect.h += rect.y - ny; rect.y = ny; break;
+            }
+            case 2: { // bottom-right
+              rect.w = clamp(x - rect.x, 10, displayW - rect.x); rect.h = clamp(y - rect.y, 10, displayH - rect.y); break;
+            }
+            case 3: { // bottom-left
+              const nx = clamp(x, 0, rect.x + rect.w - 10);
+              rect.w += rect.x - nx; rect.x = nx; rect.h = clamp(y - rect.y, 10, displayH - rect.y); break;
+            }
+          }
+          draw(); updatePreview(); return;
+        }
+
+        if (dragging) {
+          if (dragging.type === 'moveRect') {
+            const nx = clamp(dragging.origX + (x - dragging.startX), 0, displayW - rect.w);
+            const ny = clamp(dragging.origY + (y - dragging.startY), 0, displayH - rect.h);
+            rect.x = nx; rect.y = ny; draw(); updatePreview(); return;
+          }
+          if (dragging.type === 'drawRect') {
+            const sx = dragging.startX, sy = dragging.startY;
+            rect.x = Math.min(sx, x); rect.y = Math.min(sy, y);
+            rect.w = Math.max(10, Math.abs(x - sx)); rect.h = Math.max(10, Math.abs(y - sy));
+            draw(); updatePreview(); return;
+          }
+        }
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      isPointerDown = false; activeHandleIndex = -1; activeCornerIndex = -1; dragging = null;
+    });
+
+    /*****************************************************************
+     * Botones de UI: modos, reset, guardar recorte
+     *****************************************************************/
+    document.getElementById('cropRectBtn').addEventListener('click', () => {
+      mode = 'rect';
+      showHandles = true;
+      document.getElementById('modeHint').textContent = 'Modo rectangular: ajusta el marco; la vista previa se actualiza en tiempo real.';
+      document.getElementById('resetPointsBtn').classList.add('d-none');
+      document.getElementById('hidePointsBtn').classList.remove('d-none');
+      draw(); updatePreview();
+    });
+
+    document.getElementById('cropPolyBtn').addEventListener('click', () => {
+      mode = 'poly';
+      showHandles = true;
+      document.getElementById('modeHint').textContent = 'Modo libre: arrastra los 4 puntos para encuadrar; la imagen se corregirá al guardar.';
+      document.getElementById('resetPointsBtn').classList.remove('d-none');
+      document.getElementById('hidePointsBtn').classList.remove('d-none');
+      draw(); updatePreview();
+    });
+
+    document.getElementById('hidePointsBtn').addEventListener('click', () => {
+      showHandles = !showHandles;
+      document.getElementById('hidePointsBtn').querySelector('span').textContent = showHandles ? 'Ocultar Puntos' : 'Mostrar Puntos';
+      draw();
+      updatePreview();
+    });
+
+    document.getElementById('resetPointsBtn').addEventListener('click', () => {
+      if (!img || !img.src) return;
+      resetCropPoints(); draw(); updatePreview();
+    });
+
+    document.getElementById('saveCropBtn').addEventListener('click', async () => {
+      if (!img || !img.src) return alert('No hay imagen cargada.');
+      let off;
+      if (mode === 'poly') {
+        off = await getPerspectiveCorrectedCanvas();
+      } else {
+        off = getRectangularCroppedCanvas();
+      }
+
+      if (!off) return alert('No se pudo generar el recorte.');
+      off.toBlob(blob => {
+        if (!blob) return alert('Error creando blob.');
+        modifiedImages[currentCurp] = modifiedImages[currentCurp] || {};
+        modifiedImages[currentCurp][currentFileName] = blob;
+        const newUrl = _createObjectURL(blob);
+        img = new Image();
+        img.onload = () => {
+          imgNaturalW = img.naturalWidth; imgNaturalH = img.naturalHeight;
+          setupCanvasForImage();
+        };
+        img.src = newUrl;
+        const thumbs = document.querySelectorAll('#gallery img');
+        thumbs.forEach(t => {
+          if (t.dataset.filename === currentFileName) t.src = newUrl;
+        });
+        renderCurpList(document.getElementById('searchInput').value || '');
+        alert('Recorte guardado correctamente.');
+      }, 'image/png', 0.92);
+    });
+
+    /*****************************************************************
+     * Generar canvas con recorte a tamaño original
+     *****************************************************************/
+    function getRectangularCroppedCanvas() {
+      if (!img || !img.src) return null;
+      const outW = rect.w * scaleToOriginal;
+      const outH = rect.h * scaleToOriginal;
+      const off = document.createElement('canvas');
+      off.width = outW; off.height = outH;
+      const oc = off.getContext('2d');
+      const sx = rect.x * scaleToOriginal;
+      const sy = rect.y * scaleToOriginal;
+      oc.drawImage(img, sx, sy, outW, outH, 0, 0, outW, outH);
+      return off;
+    }
+
+    /*****************************************************************
+     * NUEVA FUNCIÓN: Genera un canvas con corrección de perspectiva
+     * USANDO OPENCV.JS
+     *****************************************************************/
+    async function getPerspectiveCorrectedCanvas() {
+      if (!img || !img.src || handles.length !== 4) return null;
+      if (typeof cv === 'undefined' || !cv.Mat) {
+        alert("OpenCV.js no está cargado. Por favor, espera unos segundos e inténtalo de nuevo.");
+        return null;
+      }
+
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = imgNaturalW;
+      offscreenCanvas.height = imgNaturalH;
+      const offscreenCtx = offscreenCanvas.getContext('2d');
+      offscreenCtx.drawImage(img, 0, 0, imgNaturalW, imgNaturalH);
+
+      let srcMat = cv.imread(offscreenCanvas);
+      let dstMat = new cv.Mat();
+
+      const srcPoints = handles.map(h => [h.x * scaleToOriginal, h.y * scaleToOriginal]);
+
+      const topWidth = distance(srcPoints[0][0], srcPoints[0][1], srcPoints[1][0], srcPoints[1][1]);
+      const bottomWidth = distance(srcPoints[3][0], srcPoints[3][1], srcPoints[2][0], srcPoints[2][1]);
+      const leftHeight = distance(srcPoints[0][0], srcPoints[0][1], srcPoints[3][0], srcPoints[3][1]);
+      const rightHeight = distance(srcPoints[1][0], srcPoints[1][1], srcPoints[2][0], srcPoints[2][1]);
+      const outW = Math.round(Math.max(topWidth, bottomWidth));
+      const outH = Math.round(Math.max(leftHeight, rightHeight));
+
+      const dsize = new cv.Size(outW, outH);
+
+      let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        srcPoints[0][0], srcPoints[0][1],
+        srcPoints[1][0], srcPoints[1][1],
+        srcPoints[2][0], srcPoints[2][1],
+        srcPoints[3][0], srcPoints[3][1]
+      ]);
+
+      let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        dsize.width, 0,
+        dsize.width, dsize.height,
+        0, dsize.height
+      ]);
+
+      let M = cv.getPerspectiveTransform(srcTri, dstTri);
+      cv.warpPerspective(srcMat, dstMat, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = outW;
+      outputCanvas.height = outH;
+      cv.imshow(outputCanvas, dstMat);
+
+      srcMat.delete(); dstMat.delete(); M.delete(); srcTri.delete(); dstTri.delete();
+
+      return outputCanvas;
+    }
+
+    /*****************************************************************
+     * Actualizar vista previa
+     *****************************************************************/
+    function updatePreview() {
+      if (!img || !img.src) {
+        pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height); return;
+      }
+      let off;
+      if (mode === 'poly') {
+        off = document.createElement('canvas');
+        const oc = off.getContext('2d');
+        off.width = displayW; off.height = displayH;
+        oc.drawImage(imageCanvas, 0, 0);
+        oc.globalCompositeOperation = 'destination-in';
+        oc.beginPath();
+        oc.moveTo(handles[0].x, handles[0].y);
+        for (let i = 1; i < handles.length; i++) oc.lineTo(handles[i].x, handles[i].y);
+        oc.closePath();
+        oc.fill();
+        oc.globalCompositeOperation = 'source-over';
+      } else {
+        off = getRectangularCroppedCanvas();
+      }
+
+      if (!off) return;
+      const containerW = previewCanvas.parentElement.clientWidth;
+      const w = off.width, h = off.height;
+
+      let ratio = 1;
+      const maxW = containerW;
+      const maxH = containerW * (h / w);
+      if (w > maxW) {
+        ratio = maxW / w;
+      }
+      if (h * ratio > maxH) {
+        ratio = maxH / h;
+      }
+
+      const dw = Math.round(w * ratio);
+      const dh = Math.round(h * ratio);
+
+      previewCanvas.width = dw;
+      previewCanvas.height = dh;
+
+      pctx.drawImage(off, 0, 0, dw, dh);
+      previewCanvas.style.width = dw + 'px';
+      previewCanvas.style.height = dh + 'px';
+    }
+
+    /*****************************************************************
+     * Descargas: todo y solo editadas
+     *****************************************************************/
+    document.getElementById('downloadZipBtn').addEventListener('click', async () => {
+      const zip = new JSZip();
+      for (const [curp, entries] of Object.entries(curpGroups)) {
+        const folder = zip.folder(curp);
+        for (const entry of entries) {
+          try {
+            const name = entry.name.split('/').pop();
+            if (modifiedImages[curp] && modifiedImages[curp][entry.name]) {
+              folder.file(name, modifiedImages[curp][entry.name], { binary: true });
+            } else {
+              const b = await entry.async('blob');
+              folder.file(name, b, { binary: true });
+            }
+          } catch (err) { console.error('Error añadiendo al zip', err); }
+        }
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'imagenes_todas.zip');
+    });
+
+    document.getElementById('downloadEditedBtn').addEventListener('click', async () => {
+      const zip = new JSZip();
+      let folderCount = 0;
+      for (const curp of Object.keys(curpGroups)) {
+        const entries = curpGroups[curp];
+        if (!entries || entries.length === 0) continue;
+        const hasModifiedImages = modifiedImages[curp] && Object.keys(modifiedImages[curp]).length > 0;
+        if (hasModifiedImages) {
+          const folder = zip.folder(curp);
+          folderCount++;
+          for (const entry of entries) {
+            try {
+              const name = entry.name.split('/').pop();
+              const blob = modifiedImages[curp] && modifiedImages[curp][entry.name] ? modifiedImages[curp][entry.name] : await entry.async('blob');
+              folder.file(name, blob, { binary: true });
+            } catch (err) {
+              console.error('Error añadiendo archivo al zip:', entry.name, err);
+            }
+          }
+        }
+      }
+      if (!folderCount) {
+        alert('No hay carpetas con imágenes editadas para descargar.');
+        return;
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'carpetas_editadas.zip');
+    });
+
+    /*****************************************************************
+     * Navegación entre imágenes (modal)
+     *****************************************************************/
+    async function goToIndex(newIndex) {
+      if (!currentCurp) return;
+      const files = curpGroups[currentCurp] || [];
+      if (!files.length) return;
+      currentIndex = (newIndex + files.length) % files.length;
+      const entry = files[currentIndex];
+      await openModal(entry.name, currentIndex);
+    }
+    document.getElementById('prevBtn').addEventListener('click', () => goToIndex(currentIndex - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => goToIndex(currentIndex + 1));
+
+    // flechas teclado cuando modal está abierto
+    imageModalEl.addEventListener('shown.bs.modal', () => {
+      const keyHandler = (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); goToIndex(currentIndex - 1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); goToIndex(currentIndex + 1); }
+      };
+      window.addEventListener('keydown', keyHandler);
+      imageModalEl.addEventListener('hidden.bs.modal', () => {
+        window.removeEventListener('keydown', keyHandler);
+      }, { once: true });
+    });
+
+    // reajustar canvas si se redimensiona la ventana mientras el modal está abierto
+    window.addEventListener('resize', () => {
+      if (imageModalEl.classList.contains('show') && img && img.src) {
+        setupCanvasForImage();
+      }
+    });
+
+    // antes de salir, revocamos objectURLs
+    window.addEventListener('beforeunload', () => { _revokeAll(); });
+
+      // Si el usuario no ha iniciado sesión, redirige a la página de inicio.
+        // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.replace('Inicio.html');
+        }
+
+        // Esta función se activará al hacer clic en "Cerrar sesión"
+        function cerrarSesion() {
+            sessionStorage.removeItem("isLoggedIn");
+            window.location.replace('Inicio.html');
+        }
+  </script>
+</body>
+
+</html>
