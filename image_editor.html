@@ -242,7 +242,7 @@
                         <select class="form-select" id="downloadFormat">
                             <option value="png" selected>PNG (Transparencia)</option>
                             <option value="jpeg">JPEG</option>
-                       <!--<option value="webp">WEBP</option>-->
+                            <option value="webp">WEBP</option>
                             <option value="pdf">PDF</option>
                         </select>
                     </div>
@@ -521,11 +521,33 @@
             canvasContainer.style.height = imageCanvas.height * scale + 'px';
         }
 
+        // Variable global para el patrón de fondo de damas
+        let checkerboardPattern;
+
+        function createCheckerboardPattern() {
+            const patternCanvas = document.createElement('canvas');
+            const patternContext = patternCanvas.getContext('2d');
+            const tileSize = 20;
+            patternCanvas.width = tileSize * 2;
+            patternCanvas.height = tileSize * 2;
+
+            patternContext.fillStyle = '#ccc';
+            patternContext.fillRect(0, 0, tileSize, tileSize);
+            patternContext.fillRect(tileSize, tileSize, tileSize, tileSize);
+            patternContext.fillStyle = '#fff';
+            patternContext.fillRect(tileSize, 0, tileSize, tileSize);
+            patternContext.fillRect(0, tileSize, tileSize, tileSize);
+
+            return ctx.createPattern(patternCanvas, 'repeat');
+        }
+
         function redrawCanvas() {
             ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
-
-            // Dibujar el fondo blanco del lienzo
-            ctx.fillStyle = '#FFFFFF';
+            // Dibujar el fondo de damas
+            if (!checkerboardPattern) {
+                checkerboardPattern = createCheckerboardPattern();
+            }
+            ctx.fillStyle = checkerboardPattern;
             ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
 
             ctx.filter = `
@@ -1118,8 +1140,8 @@
                 );
                 finalCtx.restore();
             });
-
-            const imgDataURL = finalCanvas.toDataURL('image/png'); // Usar PNG para mantener calidad
+            // Modificación: Eliminar el fondo blanco para PDF
+            const imgDataURL = finalCanvas.toDataURL('image/' + (format === 'jpeg' ? 'jpeg' : 'png'), 1);
 
             if (format === 'pdf') {
                 const { jsPDF } = window.jspdf;
@@ -1128,7 +1150,7 @@
                     unit: 'px',
                     format: [finalCanvas.width, finalCanvas.height]
                 });
-                pdf.addImage(imgDataURL, 'PNG', 0, 0, finalCanvas.width, finalCanvas.height);
+                pdf.addImage(imgDataURL, 'PNG', 0, 0, finalCanvas.width, finalCanvas.height, '', 'FAST');
                 pdf.save(fileName);
             } else {
                 finalCanvas.toBlob(blob => {
@@ -1216,20 +1238,7 @@
             };
             newImage.src = tempCanvas.toDataURL();
         });
-
-          // Si el usuario no ha iniciado sesión, redirige a la página de inicio.
-        // La ruta '../Inicio.html' asume que Menu_Principal.html está en una subcarpeta (ej. 'Herramientas').
-        if (sessionStorage.getItem("isLoggedIn") !== "true") {
-            window.location.replace('index.html');
-        }
-
-        // Esta función se activará al hacer clic en "Cerrar sesión"
-        function cerrarSesion() {
-            sessionStorage.removeItem("isLoggedIn");
-            window.location.replace('index.html');
-        }
     </script>
 </body>
-
 
 </html>
